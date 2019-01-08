@@ -9,8 +9,6 @@ import 'dart:math';
 
 class HafasProduct {}
 
-class HafasLine {}
-
 class HafasLocation {
   HafasLocation({this.lat, this.lon});
   double lat;
@@ -29,12 +27,148 @@ class HafasLocation {
 }
 
 class HafasStation {
-  HafasStation({this.title, this.id, this.location, this.dist, this.lid});
+  HafasStation({
+    this.title,
+    this.id,
+    this.location,
+    this.dist,
+    this.lid,
+    this.instance,
+  });
+  Hafas instance;
   String title;
   int id;
   String lid;
   int dist = 0;
   HafasLocation location;
+
+  Future<List<HafasLine>> getDepArr(
+      {DateTime date, Duration duration, String type}) async {
+    if (date == null) {
+      date = DateTime.now();
+    }
+    var req = {
+      'type': 'DEP',
+      'time': new DateFormat("HHmmss").format(date),
+      'date': new DateFormat("yyyyMMdd").format(date),
+      'stbLoc': {'lid': Uri.encodeFull('A=1@L=' + id.toString() + '@')},
+      'dur': duration != null ? duration.inMinutes : 60 * 12
+    };
+    try {
+      var res = await instance._request({
+        'meth': 'StationBoard',
+        'req': req,
+      }, {});
+      var prodL = res['common']['prodL'];
+      var locL = res['common']['locL'];
+
+      var items = new List<HafasLine>();
+      res['jnyL'].forEach((dynamic item) {
+        var stops = new List<HafasStop>();
+        var prod = prodL[item['prodX']];
+        item['stopL'].forEach((stop) {
+          var stopInfo = locL[stop['locX']];
+          var dtime =
+              Hafas.parseDate(item['date'], stop['dTimeS'] ?? stop['dTimeR']);
+          var atime =
+              Hafas.parseDate(item['date'], stop['aTimeS'] ?? stop['aTimeR']);
+          stops.add(new HafasStop(
+            arival: atime,
+            depature: dtime,
+            station: new HafasStation(title: stopInfo['name'], id: int.parse(stopInfo['extId'])),
+          ));
+        });
+        items.add(new HafasLine(
+          name: prod['name'],
+          info: item['dirTxt'],
+          type: int.parse(prod['prodCtx']['catCode']) == 5 ? 'BUS' : 'TRAIN',
+          stops: stops,
+        ));
+      });
+      return items;
+    } catch (e) {
+      print(e);
+      return [];
+    }
+  }
+
+  Future<List<HafasLine>> depatures({
+    DateTime date,
+    Duration duration,
+  }) async {
+    return this.getDepArr(type: 'DEP', date: date, duration: duration);
+  }
+
+  Future<List<HafasLine>> arivals({DateTime date, Duration duration}) async {
+    return this.getDepArr(type: 'ARR', date: date, duration: duration);
+  }
+}
+
+class HafasStop {
+  HafasStop({
+    this.station,
+    this.depature,
+    this.arival,
+    this.arivalLive,
+    this.depatureLive,
+  });
+  HafasStation station;
+  DateTime depature;
+  DateTime arival;
+  DateTime depatureLive;
+  DateTime arivalLive;
+}
+
+class HafasLine {
+  HafasLine({
+    this.name,
+    this.info,
+    this.type,
+    this.stops,
+  });
+  HafasProduct product;
+  String name;
+  String info;
+  dynamic data;
+
+  List<HafasStop> stops;
+  String type;
+
+  HafasStop getStopByStation(HafasStation station) {
+    try {
+      return stops.firstWhere((s) => s.station.id == station.id);
+    } catch (e) {
+      return null;
+    }
+  }
+
+  DateTime getEstimatedDepatureForStation(HafasStation station) {
+    var stop = this.getStopByStation(station);
+    return stop == null ? stop.depature : null;
+  }
+
+  DateTime getLiveDepatureForStation(HafasStation station) {
+    var stop = this.getStopByStation(station);
+    return stop == null ? stop.depature : null;
+  }
+
+  DateTime getEstimatedArivalForStation(HafasStation station) {
+    var stop = this.getStopByStation(station);
+    return stop == null ? stop.arival : null;
+  }
+
+  DateTime getLiveArivalForStation(HafasStation station) {
+    var stop = this.getStopByStation(station);
+    return stop == null ? stop.arival : null;
+  }
+
+  HafasStop getNextStop() {
+    return null;
+  }
+
+  HafasLocation getLocation() {
+    return null;
+  }
 }
 
 class HafasConfig {
@@ -77,7 +211,10 @@ class HafasConfig {
     body['auth'] = {'type': 'AID', 'aid': 'n91dB8Z77MLdoR0K'};
   }
 
-  void transformReq(Options req, Map<String, String> query) {}
+  void transformReq(
+    Options req,
+    Map<String, String> query,
+  ) {}
   String formatCoord(double cord) {
     return (cord * 1000000).round().toString();
   }
@@ -106,7 +243,9 @@ abstract class ArrivalOptions {
 class Hafas {
   HafasConfig config = null;
   Dio _dio = null;
-  Hafas({this.config}) {
+  Hafas({
+    this.config,
+  }) {
     _dio = new Dio();
     _dio.options.baseUrl = config.endpoint;
     _dio.options.connectTimeout = 5000; //5s
@@ -117,7 +256,9 @@ class Hafas {
     _dio.options.method = 'POST';
   }
 
-  String buildQueryString(Map<String, String> query) {
+  String buildQueryString(
+    Map<String, String> query,
+  ) {
     return query.entries.map((entry) {
       return Uri.encodeQueryComponent(entry.key) +
           '=' +
@@ -125,13 +266,32 @@ class Hafas {
     }).join('&');
   }
 
-  String formatLocationIdentifier(Map<String, String> query) {
+  String formatLocationIdentifier(
+    Map<String, String> query,
+  ) {
     return query.entries.map((entry) {
           return Uri.encodeQueryComponent(entry.key) +
               '@' +
               Uri.encodeQueryComponent(entry.value);
         }).join('&') +
         '@';
+  }
+
+  static DateTime parseDate(
+    String date,
+    String time,
+  ) {
+    if (date == null || time == null) {
+      return null;
+    }
+    return new DateTime(
+      int.parse(date.substring(0, 4)),
+      int.parse(date.substring(4, 6)),
+      int.parse(date.substring(6, 8)),
+      int.parse(time.substring(0, 2)),
+      int.parse(time.substring(2, 4)),
+      int.parse(time.substring(4, 6)),
+    );
   }
 
   Future<dynamic> _request(inputData, opt) async {
@@ -158,33 +318,10 @@ class Hafas {
       throw new Error();
     }
     return res.data['svcResL'][0]['res'];
-    // return res.data;
-  }
-
-  Future<dynamic> departures(int station) async {
-    var req = {
-      'type': 'DEP',
-      'time': new DateFormat("HHmmss").format(DateTime.now()),
-      'date': new DateFormat("yyyyMMdd").format(DateTime.now()),
-      'stbLoc': {'lid': Uri.encodeFull('A=1@L=' + station.toString() + '@')},
-      //dirLoc: dir,
-      //jnyFltrL: [products],
-      'dur': 120
-    };
-    try {
-      var res = await _request({'meth': 'StationBoard', 'req': req}, {});
-      var prodL = res['common']['prodL'];
-      return res['jnyL'].map((item) {
-        item['prod'] = prodL[item['prodX']];
-        return item;
-      }).toList();
-    } catch (e) {
-      return [];
-    }
   }
 
   Future<HafasStation> station(int station) async {
-    return new HafasStation();
+    return null;
   }
 
   Future<List<HafasStation>> findStationsByCoordinates(
@@ -209,13 +346,16 @@ class Hafas {
     }, {});
     return (res['locL'] as List).map((value) {
       return new HafasStation(
-          title: value['name'],
-          id: int.parse(value['extId']),
-          dist: value['dist'],
-          lid: value['lid'],
-          location: new HafasLocation(
-              lat: value['crd']['y'] / 1000000,
-              lon: value['crd']['x'] / 1000000));
+        title: value['name'],
+        id: int.parse(value['extId']),
+        dist: value['dist'],
+        lid: value['lid'],
+        location: new HafasLocation(
+          lat: value['crd']['y'] / 1000000,
+          lon: value['crd']['x'] / 1000000,
+        ),
+        instance: this,
+      );
     }).toList();
   }
 
@@ -237,13 +377,17 @@ class Hafas {
     }, {});
     var list = (res['match']['locL'] as List).map((value) {
       var loc = new HafasLocation(
-          lat: value['crd']['y'] / 1000000, lon: value['crd']['x'] / 1000000);
+        lat: value['crd']['y'] / 1000000,
+        lon: value['crd']['x'] / 1000000,
+      );
       return new HafasStation(
-          title: value['name'],
-          id: int.parse(value['extId'] ?? 0),
-          dist: location != null ? loc.getDistance(location).toInt() : 0,
-          lid: value['lid'],
-          location: loc);
+        title: value['name'],
+        id: int.parse(value['extId'] ?? 0),
+        dist: location != null ? loc.getDistance(location).toInt() : 0,
+        lid: value['lid'],
+        location: loc,
+        instance: this,
+      );
     }).toList();
     if (location != null) {
       list.sort((a, b) {
@@ -254,11 +398,22 @@ class Hafas {
   }
 }
 
-/*main(List<String> args) async {
-  var RMV = new Hafas(config: new HafasConfig());
-  var res = await RMV.departures(106907);
-  print(res);
-  var res = await RMV.findStationsByQuery('wiesbaden');
-  print(res);
+main(List<String> args) async {
+  var bahn = new Hafas(config: new HafasConfig());
+  List<HafasStation> res = await bahn.findStationsByQuery(' wiesb', null);
+  print(res.first.title);
+  print('-------------');
+  var deps = await res.first.depatures();
+  deps.forEach((line) {
+    print(line.name + ' - ' + line.info);
+    line.stops.forEach((stop) {
+      print('\t' +
+          stop.station.title +
+          ' - ' +
+          stop.arival.toString() +
+          '/' +
+          stop.depature.toString() +
+          '');
+    });
+  });
 }
-*/

@@ -23,7 +23,7 @@ class StopPage extends StatefulWidget {
 class _StopPageState extends State<StopPage>
     with SingleTickerProviderStateMixin {
   TabController tabController;
-  List<dynamic> departures = [];
+  List<HafasLine> departures = [];
   Future<dynamic> loading;
   bool loaded = false;
   bool fav = false;
@@ -49,8 +49,7 @@ class _StopPageState extends State<StopPage>
 
 
   Future<void> updateData() async {
-    var RMV = new Hafas(config: new HafasConfig());
-    var ldn = RMV.departures(widget.station.id);
+    var ldn = this.widget.station.depatures();
     var _fav = false;
 
     if (!loaded) {
@@ -62,23 +61,6 @@ class _StopPageState extends State<StopPage>
 
     var res = await ldn;
 
-    res = (res as List<dynamic>).where((r) {
-      return r['isRchbl'];
-    }).map((r) {
-      var dTimeS = r['stbStop']['dTimeS'] as String;
-      var date = r['date'] as String;
-
-      var time = new DateTime(
-          int.parse(date.substring(0, 4)),
-          int.parse(date.substring(4, 6)),
-          int.parse(date.substring(6, 8)),
-          int.parse(dTimeS.substring(0, 2)),
-          int.parse(dTimeS.substring(2, 4)),
-          int.parse(dTimeS.substring(4, 6)));
-      r['time'] = time;
-      return r;
-    }).toList();
-
     setState(() {
       if(!loaded) {
         loading = ldn;
@@ -89,7 +71,7 @@ class _StopPageState extends State<StopPage>
   }
 
   Future<void> showMetaInfo(info, BuildContext context) async {
-    print(info['prod']['prodCtx']['catCode']);
+    /*print(info['prod']['prodCtx']['catCode']);
 
     showBottomSheet(
       builder: (BuildContext context) {
@@ -152,7 +134,7 @@ class _StopPageState extends State<StopPage>
         );
       },
       context: context,
-    );
+    );*/
   }
 
   Widget buildMapTab() {
@@ -196,8 +178,9 @@ class _StopPageState extends State<StopPage>
     var now = DateTime.now();
     var list = new ListView.builder(
       itemBuilder: (context, index) {
-        var time = departures[index]['time'] as DateTime;
-        var minutesTDep = time.difference(now);
+        var line = this.departures[index];
+        var stop = line.getStopByStation(this.widget.station);
+        var minutesTDep = stop.depature.difference(now);
         var depString = '';
         if (minutesTDep.inMinutes > 60) {
           depString = minutesTDep.toString().substring(0, 4);
@@ -205,14 +188,14 @@ class _StopPageState extends State<StopPage>
           depString = minutesTDep.inMinutes.toString() + ' Min';
         }
         return new ListTile(
-          title: new Text(departures[index]['dirTxt']),
-          key: Key(departures[index]['jid']),
+          title: new Text(line.info),
+          // key: Key(line),
           leading:
-              int.parse(departures[index]['prod']['prodCtx']['catCode']) == 5
+              line.type == 'BUS'
                   ? new Icon(Icons.directions_bus)
                   : new Icon(Icons.directions_railway),
           onTap: () {
-            showMetaInfo(departures[index], context);
+            showMetaInfo(line, context);
           },
           trailing: new Text(
             depString,
@@ -221,9 +204,9 @@ class _StopPageState extends State<StopPage>
             ),
           ),
           // isThreeLine: true,
-          subtitle: new Text(departures[index]['prod']['name'] +
+          subtitle: new Text(line.name +
               ' - ' +
-              timeFormat.format(time)),
+              timeFormat.format(stop.depature)),
         );
       },
       itemCount: departures.length,
