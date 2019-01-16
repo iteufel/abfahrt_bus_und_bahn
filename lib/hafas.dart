@@ -70,11 +70,16 @@ class HafasStation {
           var stopInfo = locL[stop['locX']];
           var dtime =
               Hafas.parseDate(item['date'], stop['dTimeS'] ?? stop['dTimeR']);
+          var liveDtime = Hafas.parseDate(item['date'], stop['dTimeR'] ?? stop['dTimeS']);
           var atime =
               Hafas.parseDate(item['date'], stop['aTimeS'] ?? stop['aTimeR']);
+                        var liveAtime =
+              Hafas.parseDate(item['date'], stop['aTimeR'] ?? stop['aTimeS']);
           stops.add(new HafasStop(
-            arival: atime,
-            depature: dtime,
+            arival: atime ?? dtime,
+            depature: dtime ?? atime,
+            depatureLive: liveDtime ?? dtime,
+            arivalLive: liveAtime ?? atime,
             station: new HafasStation(title: stopInfo['name'], id: int.parse(stopInfo['extId'])),
           ));
         });
@@ -398,7 +403,7 @@ class Hafas {
   }
 }
 
-main(List<String> args) async {
+/*main(List<String> args) async {
   var bahn = new Hafas(config: new HafasConfig());
   List<HafasStation> res = await bahn.findStationsByQuery(' wiesb', null);
   print(res.first.title);
@@ -417,3 +422,4 @@ main(List<String> args) async {
     });
   });
 }
+*/

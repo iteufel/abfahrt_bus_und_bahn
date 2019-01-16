@@ -9,6 +9,7 @@ import 'package:intl/intl.dart';
 import 'favorites.dart';
 import 'dart:io';
 import 'package:flutter/cupertino.dart';
+import 'package:liquid_pull_to_refresh/liquid_pull_to_refresh.dart';
 
 class StopPage extends StatefulWidget {
   StopPage({Key key, this.title, this.station}) : super(key: key);
@@ -41,12 +42,11 @@ class _StopPageState extends State<StopPage>
 
   @override
   void dispose() {
-    if(updateTimer.isActive) {
+    if (updateTimer.isActive) {
       updateTimer.cancel();
     }
     super.dispose();
   }
-
 
   Future<void> updateData() async {
     var ldn = this.widget.station.depatures();
@@ -62,7 +62,7 @@ class _StopPageState extends State<StopPage>
     var res = await ldn;
 
     setState(() {
-      if(!loaded) {
+      if (!loaded) {
         loading = ldn;
       }
       departures = res;
@@ -70,25 +70,72 @@ class _StopPageState extends State<StopPage>
     });
   }
 
-  Future<void> showMetaInfo(info, BuildContext context) async {
-    /*print(info['prod']['prodCtx']['catCode']);
-
+  Future<void> showMetaInfo(HafasLine line, BuildContext context) async {
     showBottomSheet(
       builder: (BuildContext context) {
+        List<Widget> stops = line.stops.map((item) {
+          // var diff = item.arivalLive.difference(item.arival);
+          var diffMin = 0; //diff.inMinutes;
+          var row = new Row(
+            children: <Widget>[
+              new Text(timeFormat.format(item.arivalLive ??
+                  item.arival ??
+                  item.depature ??
+                  item.depatureLive)),
+              new Text(' - '),
+              new Text(timeFormat.format(item.depatureLive ??
+                  item.depature ??
+                  item.arivalLive ??
+                  item.arival))
+            ],
+          );
+          if (diffMin > 0) {
+            row.children.add(new Text(
+              ' +' + diffMin.toString(),
+              style: new TextStyle(color: Colors.red),
+            ));
+          }
+          return new ListTile(
+              leading: new ConstrainedBox(
+                constraints: BoxConstraints.tightFor(width: 10),
+                child: Container(
+                  color: Colors.red,
+                ),
+              ),
+              title: new Text(item.station.title),
+              subtitle: row);
+        }).toList();
         return new Material(
           clipBehavior: Clip.antiAlias,
           borderRadius: BorderRadius.only(
-              topLeft: Radius.circular(25), topRight: Radius.circular(25)),
+            topLeft: Radius.circular(25),
+            topRight: Radius.circular(25),
+          ),
           child: new Container(
+            height: 575,
             child: new SafeArea(
               child: new Column(
                 children: <Widget>[
                   new Container(
                     child: new Row(
                       children: <Widget>[
+                        new Container(
+                          child: line.type == 'BUS'
+                              ? new Icon(
+                                  Icons.directions_bus,
+                                  size: 32,
+                                  color: Colors.white,
+                                )
+                              : new Icon(
+                                  Icons.directions_railway,
+                                  size: 32,
+                                  color: Colors.white,
+                                ),
+                          margin: const EdgeInsets.only(right: 15),
+                        ),
                         new Expanded(
                           child: new Text(
-                            info['prod']['name'] + ' - ' + info['dirTxt'],
+                            line.name + ' - ' + line.info,
                             style: Theme.of(context).textTheme.title.copyWith(
                                   color: Colors.white,
                                 ),
@@ -110,15 +157,11 @@ class _StopPageState extends State<StopPage>
                     padding: new EdgeInsets.all(15),
                     color: Theme.of(context).primaryColor,
                   ),
-                  new Container(
+                  new Expanded(
                     child: new ListView(
-                      children: <Widget>[
-                        new ListTile(
-                          title: new Text('dfdf'),
-                        )
-                      ],
+                      children: stops,
                     ),
-                    height: 200,
+                    //mmi: 200,
                   )
                 ],
                 mainAxisSize: MainAxisSize.min,
@@ -134,7 +177,7 @@ class _StopPageState extends State<StopPage>
         );
       },
       context: context,
-    );*/
+    );
   }
 
   Widget buildMapTab() {
@@ -179,41 +222,51 @@ class _StopPageState extends State<StopPage>
     var list = new ListView.builder(
       itemBuilder: (context, index) {
         var line = this.departures[index];
-        var stop = line.getStopByStation(this.widget.station);
-        var minutesTDep = stop.depature.difference(now);
+        var stop =
+            line.getStopByStation(this.widget.station) ?? line.stops.first;
+        var minutesTDep = stop.depatureLive.difference(now);
         var depString = '';
+        var diffInMinutes =
+            stop.depatureLive.difference(stop.depature).inMinutes;
         if (minutesTDep.inMinutes > 60) {
           depString = minutesTDep.toString().substring(0, 4);
         } else {
-          depString = minutesTDep.inMinutes.toString() + ' Min';
+          depString = (minutesTDep.inMinutes + 1).toString() + ' Min';
         }
         return new ListTile(
-          title: new Text(line.info),
-          // key: Key(line),
-          leading:
-              line.type == 'BUS'
-                  ? new Icon(Icons.directions_bus)
-                  : new Icon(Icons.directions_railway),
-          onTap: () {
-            showMetaInfo(line, context);
-          },
-          trailing: new Text(
-            depString,
-            style: new TextStyle(
-              color: minutesTDep.inMinutes < 0 ? Colors.red : Colors.green,
+            title: new Text(line.info),
+            // key: Key(line),
+            leading: line.type == 'BUS'
+                ? new Icon(Icons.directions_bus)
+                : new Icon(Icons.directions_railway),
+            onTap: () {
+              showMetaInfo(line, context);
+            },
+            trailing: new Text(
+              depString,
+              style: new TextStyle(
+                color: minutesTDep.inMinutes < 0 ? Colors.red : Colors.green,
+              ),
             ),
-          ),
-          // isThreeLine: true,
-          subtitle: new Text(line.name +
-              ' - ' +
-              timeFormat.format(stop.depature)),
-        );
+            // isThreeLine: true,
+            subtitle: new Row(
+              children: <Widget>[
+                new Text(line.name + ' - ' + timeFormat.format(stop.depature)),
+                new Text(
+                  diffInMinutes > 0 ? ' +' + diffInMinutes.toString() : '',
+                  style: new TextStyle(
+                    color: Colors.red,
+                  ),
+                )
+              ],
+            ));
       },
       itemCount: departures.length,
     );
 
-    return new RefreshIndicator(
+    return new LiquidPullToRefresh(
       child: list,
+      showChildOpacityTransition: false,
       onRefresh: () async {
         await updateData();
       },
