@@ -43,12 +43,12 @@ class _IntroPageState extends State<IntroPage> {
       iconColor: null,
       bubbleBackgroundColor: Colors.greenAccent,
       body: Text(
-        'Lorem ipsum dolor sit amet, consetetur sadipscing elitr, sed diam nonumy eirmod tempor',
+        'Sofort Haltestellen basierend auf deinem Standpunkt finden',
       ),
       title: Text('Bus & Bahn'),
       mainImage: Icon(
         Icons.train,
-        size: 200,
+        size: 180,
         color: Colors.white,
       ),
       textStyle: TextStyle(color: Colors.white),
@@ -60,12 +60,12 @@ class _IntroPageState extends State<IntroPage> {
       iconColor: null,
       bubbleBackgroundColor: Colors.greenAccent,
       body: Text(
-        'Lorem ipsum dolor sit amet, consetetur sadipscing elitr, sed diam nonumy eirmod tempor',
+        'Alle Haltestellen finden',
       ),
       title: Text('Deutschlandweit'),
       mainImage: Icon(
         Icons.directions_bus,
-        size: 200,
+        size: 180,
         color: Colors.white,
       ),
       textStyle: TextStyle(color: Colors.white),
@@ -82,7 +82,7 @@ class _IntroPageState extends State<IntroPage> {
       title: Text('Schnell'),
       mainImage: Icon(
         Icons.timer,
-        size: 200,
+        size: 180,
         color: Colors.white,
       ),
       textStyle: TextStyle(color: Colors.white),
