@@ -56,7 +56,7 @@ class _StopPageState extends State<StopPage>
     var ldn = this.widget.station.depatures(date: dateFilter);
     var _fav = false;
 
-    if (!loaded) {
+    if (!loaded && mounted) {
       setState(() {
         loading = ldn;
         fav = _fav;
@@ -64,7 +64,7 @@ class _StopPageState extends State<StopPage>
     }
 
     var res = await ldn;
-
+    if(mounted) {
     setState(() {
       if (!loaded) {
         loading = ldn;
@@ -72,6 +72,8 @@ class _StopPageState extends State<StopPage>
       departures = res;
       loaded = true;
     });
+    }
+
   }
 
   void showLocation(HafasStation station, DateTime date) {
@@ -248,10 +250,10 @@ class _StopPageState extends State<StopPage>
         var diffInMinutes = stop.depature == null
             ? 0
             : stop.depatureLive.difference(stop.depature).inMinutes;
-        if (minutesTDep.inMinutes > 60) {
-          depString = minutesTDep.toString().substring(0, 4);
+        if (minutesTDep.inMinutes > 120) {
+          depString =  minutesTDep.toString().substring(0, 4) + ' Std.';
         } else {
-          depString = (minutesTDep.inMinutes + 1).toString() + ' Min';
+          depString = (minutesTDep.inMinutes + 1).toString() + ' Min.';
         }
         return new ListTile(
             title: new Text(line.info),

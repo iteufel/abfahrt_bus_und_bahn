@@ -79,6 +79,22 @@ class HafasStation {
               Hafas.parseDate(item['date'], stop['aTimeS'] ?? stop['aTimeR']);
           var liveAtime =
               Hafas.parseDate(item['date'], stop['aTimeR'] ?? stop['aTimeS']);
+
+          if (liveDtime != null &&
+              liveDtime.difference(DateTime.now()).isNegative) {
+            liveDtime = liveDtime.add(const Duration(days: 1));
+          }
+
+          if (dtime != null && dtime.difference(DateTime.now()).isNegative) {
+            dtime = dtime.add(const Duration(days: 1));
+          }
+          if (atime != null && atime.difference(DateTime.now()).isNegative) {
+            atime = atime.add(const Duration(days: 1));
+          }
+          if (liveAtime != null &&
+              liveAtime.difference(DateTime.now()).isNegative) {
+            liveAtime = liveAtime.add(const Duration(days: 1));
+          }
           stops.add(new HafasStop(
             arival: atime ?? dtime,
             depature: dtime ?? atime,
@@ -325,7 +341,7 @@ class Hafas {
       data: bodyString,
       baseUrl: config.endpoint,
       connectTimeout: 5000,
-      receiveTimeout: 3000,
+      receiveTimeout: 10000,
       headers: {"user-agent": config.userAgent},
       responseType: ResponseType.json,
       contentType: ContentType.json,

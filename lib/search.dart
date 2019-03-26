@@ -80,10 +80,12 @@ class _SearchPageState extends State<SearchPage> {
       ),
       1,
     );
-    setState(() {
-      this.searchInputController.text = places.first.name;
-      this.serachResults = res;
-    });
+    if (mounted) {
+      setState(() {
+        this.searchInputController.text = places.first.name;
+        this.serachResults = res;
+      });
+    }
   }
 
   Future<void> findByQuery(String q) async {
@@ -98,9 +100,11 @@ class _SearchPageState extends State<SearchPage> {
         lon: position.longitude,
       ),
     );
-    setState(() {
-      this.serachResults = res;
-    });
+    if (mounted) {
+      setState(() {
+        this.serachResults = res;
+      });
+    }
   }
 
   List<HafasStation> serachResults = [];
@@ -189,10 +193,7 @@ class _SearchPageState extends State<SearchPage> {
       body: body,
       bottomNavigationBar: GestureDetector(
         onVerticalDragUpdate: (dragDetails) {
-          setState(() {
-            // dragDetails.delta.dy
-            bottomSheetSize += (dragDetails.delta.dy * -1);
-          });
+         
         },
         child: new Material(
           clipBehavior: Clip.antiAlias,
