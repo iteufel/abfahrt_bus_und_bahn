@@ -12,10 +12,11 @@ import 'package:flutter/cupertino.dart';
 import 'package:liquid_pull_to_refresh/liquid_pull_to_refresh.dart';
 
 class StopPage extends StatefulWidget {
-  StopPage({Key key, this.title, this.station}) : super(key: key);
+  StopPage({Key key, this.title, this.station, this.dateFilter}) : super(key: key);
 
   final String title;
   final HafasStation station;
+  final DateTime dateFilter;
 
   @override
   _StopPageState createState() => _StopPageState();
@@ -29,6 +30,7 @@ class _StopPageState extends State<StopPage>
   bool loaded = false;
   bool fav = false;
   Timer updateTimer;
+  DateTime dateFilter;
   DateFormat timeFormat = new DateFormat('HH:mm');
   @override
   void initState() {
@@ -49,7 +51,7 @@ class _StopPageState extends State<StopPage>
   }
 
   Future<void> updateData() async {
-    var ldn = this.widget.station.depatures();
+    var ldn = this.widget.station.depatures(date: dateFilter);
     var _fav = false;
 
     if (!loaded) {
@@ -68,6 +70,18 @@ class _StopPageState extends State<StopPage>
       departures = res;
       loaded = true;
     });
+  }
+
+  void showLocation(HafasStation station, DateTime date) {
+    Navigator.of(context).push(
+      new MaterialPageRoute(
+        builder: (context) => new StopPage(
+              title: station.title,
+              station: station,
+              dateFilter: date,
+            ),
+      ),
+    );
   }
 
   Future<void> showMetaInfo(HafasLine line, BuildContext context) async {
@@ -103,6 +117,9 @@ class _StopPageState extends State<StopPage>
                 ),
               ),
               title: new Text(item.station.title),
+              onTap: () {
+                showLocation(item.station, item.arival);
+              },
               subtitle: row);
         }).toList();
         return new Material(
@@ -226,7 +243,7 @@ class _StopPageState extends State<StopPage>
             line.getStopByStation(this.widget.station) ?? line.stops.first;
         var minutesTDep = stop.depatureLive.difference(now);
         var depString = '';
-        var diffInMinutes =
+        var diffInMinutes = stop.depature == null ? 0 :
             stop.depatureLive.difference(stop.depature).inMinutes;
         if (minutesTDep.inMinutes > 60) {
           depString = minutesTDep.toString().substring(0, 4);

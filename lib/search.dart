@@ -5,14 +5,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
 
 import 'dart:ui';
-import 'package:dio/dio.dart';
 import 'package:geolocator/geolocator.dart';
-import 'dart:math';
 import 'stop.dart';
 import 'hafas.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'dart:io';
-import 'package:liquid_pull_to_refresh/liquid_pull_to_refresh.dart';
 
 class SearchPage extends StatefulWidget {
   SearchPage({Key key, this.title}) : super(key: key);
@@ -64,12 +60,15 @@ class _SearchPageState extends State<SearchPage> {
   }
 
   Future<void> findLoaction() async {
-    Position position = await Geolocator()
-        .getCurrentPosition(desiredAccuracy: LocationAccuracy.high);
-    List<Placemark> places = await Geolocator()
-        .placemarkFromCoordinates(position.latitude, position.longitude);
-    var RMV = new Hafas(config: new HafasConfig());
-    var res = await RMV.findStationsByCoordinates(
+    Position position = await Geolocator().getCurrentPosition(
+      desiredAccuracy: LocationAccuracy.high,
+    );
+    List<Placemark> places = await Geolocator().placemarkFromCoordinates(
+      position.latitude,
+      position.longitude,
+    );
+    var rmv = new Hafas(config: new HafasConfig());
+    var res = await rmv.findStationsByCoordinates(
       new HafasLocation(
         lat: position.latitude,
         lon: position.longitude,
@@ -84,10 +83,16 @@ class _SearchPageState extends State<SearchPage> {
 
   Future<void> findByQuery(String q) async {
     var RMV = new Hafas(config: new HafasConfig());
-    Position position = await Geolocator()
-        .getCurrentPosition(desiredAccuracy: LocationAccuracy.high);
-    var res = await RMV.findStationsByQuery(q.trim(),
-        new HafasLocation(lat: position.latitude, lon: position.longitude));
+    Position position = await Geolocator().getCurrentPosition(
+      desiredAccuracy: LocationAccuracy.high,
+    );
+    var res = await RMV.findStationsByQuery(
+      q.trim(),
+      new HafasLocation(
+        lat: position.latitude,
+        lon: position.longitude,
+      ),
+    );
     setState(() {
       this.serachResults = res;
     });
@@ -119,9 +124,11 @@ class _SearchPageState extends State<SearchPage> {
                         new Expanded(
                           child: new Text(serachResults[index].title),
                         ),
-                        new Text((serachResults[index].dist / 1000)
-                                .toStringAsFixed(2) +
-                            ' Km')
+                        new Text(
+                          (serachResults[index].dist / 1000)
+                                  .toStringAsFixed(2) +
+                              ' Km',
+                        )
                       ],
                     ),
                     onTap: () {
@@ -149,54 +156,56 @@ class _SearchPageState extends State<SearchPage> {
         new Container(
           color: Theme.of(context).primaryColor,
           padding: EdgeInsets.all(15),
-          child: new SafeArea(child: AbfahrtStyle.forceIosStyle
-              ? (new CupertinoTextField(
-                  controller: this.searchInputController,
-                  placeholder: 'Suche',
-                  suffix: new CupertinoButton(
-                    child: new Icon(CupertinoIcons.location),
-                    onPressed: findLoaction,
-                  ),
-                  onSubmitted: (String text) {
-                    findByQuery(text);
-                  },
-                ))
-              : (new TextField(
-                  style: const TextStyle(
-                    color: Colors.white,
-                  ),
-                  controller: this.searchInputController,
-                  onSubmitted: (String text) async {
-                    findByQuery(text);
-                  },
-                  decoration: new InputDecoration(
-                    labelText: 'Suche',
-                    labelStyle: TextStyle(
-                      color: Colors.white,
-                    ),
-                    suffixIcon: new IconButton(
-                      icon: new Icon(Icons.location_searching,
-                          color: Colors.white),
+          child: new SafeArea(
+            child: AbfahrtStyle.forceIosStyle
+                ? (new CupertinoTextField(
+                    controller: this.searchInputController,
+                    placeholder: 'Suche',
+                    suffix: new CupertinoButton(
+                      child: new Icon(CupertinoIcons.location),
                       onPressed: findLoaction,
                     ),
-                    enabledBorder: const OutlineInputBorder(
-                      borderSide: BorderSide(
+                    onSubmitted: (String text) {
+                      findByQuery(text);
+                    },
+                  ))
+                : (new TextField(
+                    style: const TextStyle(
+                      color: Colors.white,
+                    ),
+                    controller: this.searchInputController,
+                    onSubmitted: (String text) async {
+                      findByQuery(text);
+                    },
+                    decoration: new InputDecoration(
+                      labelText: 'Suche',
+                      labelStyle: TextStyle(
                         color: Colors.white,
                       ),
-                    ),
-                    border: const OutlineInputBorder(
-                      borderSide: const BorderSide(
-                        color: Colors.white,
+                      suffixIcon: new IconButton(
+                        icon: new Icon(Icons.location_searching,
+                            color: Colors.white),
+                        onPressed: findLoaction,
+                      ),
+                      enabledBorder: const OutlineInputBorder(
+                        borderSide: BorderSide(
+                          color: Colors.white,
+                        ),
+                      ),
+                      border: const OutlineInputBorder(
+                        borderSide: const BorderSide(
+                          color: Colors.white,
+                        ),
+                      ),
+                      focusedBorder: const OutlineInputBorder(
+                        borderSide: const BorderSide(
+                          color: Colors.white,
+                        ),
                       ),
                     ),
-                    focusedBorder: const OutlineInputBorder(
-                      borderSide: const BorderSide(
-                        color: Colors.white,
-                      ),
-                    ),
-                  ),
-                )),
-        ),),
+                  )),
+          ),
+        ),
       ],
     );
 
@@ -213,7 +222,7 @@ class _SearchPageState extends State<SearchPage> {
         appBar: AppBar(
           title: Text(widget.title),
           actions: <Widget>[
-            new IconButton(
+            /*new IconButton(
               tooltip: 'Favoriten',
               icon: new Icon(Icons.favorite),
               onPressed: () {
@@ -226,7 +235,7 @@ class _SearchPageState extends State<SearchPage> {
               onPressed: () {
                 Navigator.of(context).pushNamed('settings');
               },
-            )
+            )*/
           ],
         ),
       );

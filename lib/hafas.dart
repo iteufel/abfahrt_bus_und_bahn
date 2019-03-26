@@ -1,11 +1,11 @@
-import 'package:dio/dio.dart';
+// import 'package:dio/dio.dart';
 import 'dart:async';
 import 'dart:io';
-import 'dart:typed_data';
 import 'dart:convert';
 import 'package:crypto/crypto.dart' as crypto;
 import 'package:intl/intl.dart';
 import 'dart:math';
+import 'package:dio/dio.dart';
 
 class HafasProduct {}
 
@@ -42,8 +42,11 @@ class HafasStation {
   int dist = 0;
   HafasLocation location;
 
-  Future<List<HafasLine>> getDepArr(
-      {DateTime date, Duration duration, String type}) async {
+  Future<List<HafasLine>> getDepArr({
+    DateTime date,
+    Duration duration,
+    String type,
+  }) async {
     if (date == null) {
       date = DateTime.now();
     }
@@ -70,17 +73,28 @@ class HafasStation {
           var stopInfo = locL[stop['locX']];
           var dtime =
               Hafas.parseDate(item['date'], stop['dTimeS'] ?? stop['dTimeR']);
-          var liveDtime = Hafas.parseDate(item['date'], stop['dTimeR'] ?? stop['dTimeS']);
+          var liveDtime =
+              Hafas.parseDate(item['date'], stop['dTimeR'] ?? stop['dTimeS']);
           var atime =
               Hafas.parseDate(item['date'], stop['aTimeS'] ?? stop['aTimeR']);
-                        var liveAtime =
+          var liveAtime =
               Hafas.parseDate(item['date'], stop['aTimeR'] ?? stop['aTimeS']);
           stops.add(new HafasStop(
             arival: atime ?? dtime,
             depature: dtime ?? atime,
             depatureLive: liveDtime ?? dtime,
             arivalLive: liveAtime ?? atime,
-            station: new HafasStation(title: stopInfo['name'], id: int.parse(stopInfo['extId'])),
+            station: new HafasStation(
+              title: stopInfo['name'],
+              id: int.parse(stopInfo['extId']),
+              dist: stopInfo['dist'],
+              lid: stopInfo['lid'],
+              location: new HafasLocation(
+                lat: stopInfo['crd']['y'] / 1000000,
+                lon: stopInfo['crd']['x'] / 1000000,
+              ),
+              instance: this.instance,
+            ),
           ));
         });
         items.add(new HafasLine(
@@ -256,7 +270,7 @@ class Hafas {
     _dio.options.connectTimeout = 5000; //5s
     _dio.options.receiveTimeout = 3000;
     _dio.options.headers['user-agent'] = config.userAgent;
-    _dio.options.responseType = ResponseType.JSON;
+    _dio.options.responseType = ResponseType.json;
     _dio.options.contentType = ContentType.json;
     _dio.options.method = 'POST';
   }
@@ -306,7 +320,18 @@ class Hafas {
     };
     config.transformReqBody(body);
     var bodyString = jsonEncode(body);
-    var mopts = _dio.options.merge(data: bodyString);
+
+    var mopts = new RequestOptions(
+      data: bodyString,
+      baseUrl: config.endpoint,
+      connectTimeout: 5000,
+      receiveTimeout: 3000,
+      headers: {"user-agent": config.userAgent},
+      responseType: ResponseType.json,
+      contentType: ContentType.json,
+      method: 'POST',
+    );
+
     Map<String, String> query = {};
     config.transformReq(mopts, query);
     if (config.addChecksum) {

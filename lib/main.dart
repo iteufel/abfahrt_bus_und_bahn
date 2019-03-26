@@ -47,7 +47,7 @@ class MyApp extends StatelessWidget {
           // or simply save your changes to "hot reload" in a Flutter IDE).
           // Notice that the counter didn't reset back to zero; the application
           // is not restarted.
-          primaryColor: Color(0xFF720D5D),
+          primaryColor: Color(0xFF2296F3),
           buttonColor: Color(0xFF720D5D),
         ),
         home: SearchPage(title: 'Abfahrts Monitor'),
