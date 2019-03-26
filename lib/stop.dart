@@ -37,6 +37,9 @@ class _StopPageState extends State<StopPage>
   @override
   void initState() {
     super.initState();
+    if (this.widget.dateFilter != null) {
+      this.dateFilter = this.widget.dateFilter;
+    }
     tabController = new TabController(vsync: this, length: 2);
     this.updateData();
     updateTimer = new Timer.periodic(const Duration(seconds: 20), (timer) {
@@ -64,16 +67,15 @@ class _StopPageState extends State<StopPage>
     }
 
     var res = await ldn;
-    if(mounted) {
-    setState(() {
-      if (!loaded) {
-        loading = ldn;
-      }
-      departures = res;
-      loaded = true;
-    });
+    if (mounted) {
+      setState(() {
+        if (!loaded) {
+          loading = ldn;
+        }
+        departures = res;
+        loaded = true;
+      });
     }
-
   }
 
   void showLocation(HafasStation station, DateTime date) {
@@ -122,7 +124,7 @@ class _StopPageState extends State<StopPage>
               ),
               title: new Text(item.station.title),
               onTap: () {
-                showLocation(item.station, item.arival);
+                showLocation(item.station, item.arivalLive);
               },
               subtitle: row);
         }).toList();
@@ -251,7 +253,7 @@ class _StopPageState extends State<StopPage>
             ? 0
             : stop.depatureLive.difference(stop.depature).inMinutes;
         if (minutesTDep.inMinutes > 120) {
-          depString =  minutesTDep.toString().substring(0, 4) + ' Std.';
+          depString = minutesTDep.toString().substring(0, 4) + ' Std.';
         } else {
           depString = (minutesTDep.inMinutes + 1).toString() + ' Min.';
         }
