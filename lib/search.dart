@@ -3,9 +3,11 @@ import 'dart:io';
 import 'package:abfahrt_gui/style.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
+import 'package:flutter_map/flutter_map.dart';
 
 import 'dart:ui';
 import 'package:geolocator/geolocator.dart';
+import 'package:latlong/latlong.dart';
 import 'stop.dart';
 import 'hafas.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -30,6 +32,9 @@ class SearchPage extends StatefulWidget {
 
 class _SearchPageState extends State<SearchPage> {
   TextEditingController searchInputController;
+
+  double bottomSheetSize = 0;
+  Position position;
 
   @override
   void initState() {
@@ -60,7 +65,7 @@ class _SearchPageState extends State<SearchPage> {
   }
 
   Future<void> findLoaction() async {
-    Position position = await Geolocator().getCurrentPosition(
+    position = await Geolocator().getCurrentPosition(
       desiredAccuracy: LocationAccuracy.high,
     );
     List<Placemark> places = await Geolocator().placemarkFromCoordinates(
@@ -99,6 +104,30 @@ class _SearchPageState extends State<SearchPage> {
   }
 
   List<HafasStation> serachResults = [];
+
+  Widget buildMap() {
+    /*return new FlutterMap(
+      options: new MapOptions(
+        center: new LatLng(
+          position.latitude, position.longitude
+        ),
+        zoom: 18.0,
+      ),
+      layers: [
+        new TileLayerOptions(
+          urlTemplate: "https://a.tile.openstreetmap.org/{z}/{x}/{y}.png",
+          additionalOptions: {
+            'id': 'mapbox.streets',
+          },
+        ),
+      ],
+    );*/
+    return new Container(
+      height: 0,
+      width: double.infinity,
+      color: Colors.amber,
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -153,92 +182,87 @@ class _SearchPageState extends State<SearchPage> {
             itemCount: serachResults.length,
           ),
         ),
-        new Container(
-          color: Theme.of(context).primaryColor,
-          padding: EdgeInsets.all(15),
-          child: new SafeArea(
-            child: AbfahrtStyle.forceIosStyle
-                ? (new CupertinoTextField(
-                    controller: this.searchInputController,
-                    placeholder: 'Suche',
-                    suffix: new CupertinoButton(
-                      child: new Icon(CupertinoIcons.location),
-                      onPressed: findLoaction,
-                    ),
-                    onSubmitted: (String text) {
-                      findByQuery(text);
-                    },
-                  ))
-                : (new TextField(
-                    style: const TextStyle(
-                      color: Colors.white,
-                    ),
-                    controller: this.searchInputController,
-                    onSubmitted: (String text) async {
-                      findByQuery(text);
-                    },
-                    decoration: new InputDecoration(
-                      labelText: 'Suche',
-                      labelStyle: TextStyle(
-                        color: Colors.white,
-                      ),
-                      suffixIcon: new IconButton(
-                        icon: new Icon(Icons.location_searching,
-                            color: Colors.white),
-                        onPressed: findLoaction,
-                      ),
-                      enabledBorder: const OutlineInputBorder(
-                        borderSide: BorderSide(
-                          color: Colors.white,
-                        ),
-                      ),
-                      border: const OutlineInputBorder(
-                        borderSide: const BorderSide(
-                          color: Colors.white,
-                        ),
-                      ),
-                      focusedBorder: const OutlineInputBorder(
-                        borderSide: const BorderSide(
-                          color: Colors.white,
-                        ),
-                      ),
-                    ),
-                  )),
-          ),
-        ),
       ],
     );
 
-    if (AbfahrtStyle.forceIosStyle) {
-      return new CupertinoPageScaffold(
-        navigationBar: new CupertinoNavigationBar(
-          middle: new Text('Abfahrts Monitor'),
-        ),
-        child: body,
-      );
-    } else {
-      return new Scaffold(
-        body: body,
-        appBar: AppBar(
-          title: Text(widget.title),
-          actions: <Widget>[
-            /*new IconButton(
-              tooltip: 'Favoriten',
-              icon: new Icon(Icons.favorite),
-              onPressed: () {
-                Navigator.of(context).pushNamed('favorites');
-              },
+    return new Scaffold(
+      body: body,
+      bottomNavigationBar: GestureDetector(
+        onVerticalDragUpdate: (dragDetails) {
+          setState(() {
+            // dragDetails.delta.dy
+            bottomSheetSize += (dragDetails.delta.dy * -1);
+          });
+        },
+        child: new Material(
+          clipBehavior: Clip.antiAlias,
+          borderRadius: BorderRadius.only(
+            topLeft: Radius.circular(25),
+            topRight: Radius.circular(25),
+          ),
+          child: new Container(
+            child: new SafeArea(
+              child: new Column(
+                children: <Widget>[
+                  new Container(
+                    child: new SafeArea(
+                      child: new TextField(
+                        style: const TextStyle(
+                          color: Colors.white,
+                        ),
+                        controller: this.searchInputController,
+                        onSubmitted: (String text) async {
+                          findByQuery(text);
+                        },
+                        decoration: new InputDecoration(
+                          labelText: 'Suche',
+                          labelStyle: TextStyle(
+                            color: Colors.white,
+                          ),
+                          suffixIcon: new IconButton(
+                            icon: new Icon(Icons.location_searching,
+                                color: Colors.white),
+                            onPressed: findLoaction,
+                          ),
+                          enabledBorder: const OutlineInputBorder(
+                            borderSide: BorderSide(
+                              color: Colors.white,
+                            ),
+                          ),
+                          border: const OutlineInputBorder(
+                            borderSide: const BorderSide(
+                              color: Colors.white,
+                            ),
+                          ),
+                          focusedBorder: const OutlineInputBorder(
+                            borderSide: const BorderSide(
+                              color: Colors.white,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                    padding: new EdgeInsets.fromLTRB(15, 15, 15, 0),
+                    color: Theme.of(context).primaryColor,
+                  ),
+                  buildMap(),
+                ],
+                mainAxisSize: MainAxisSize.min,
+              ),
             ),
-            new IconButton(
-              tooltip: 'Einstellungen',
-              icon: new Icon(Icons.settings),
-              onPressed: () {
-                Navigator.of(context).pushNamed('settings');
-              },
-            )*/
-          ],
+            constraints: BoxConstraints(
+              minWidth: double.infinity,
+              maxHeight: 600,
+            ),
+          ),
+          color: Theme.of(context).primaryColor,
+          elevation: 10,
         ),
-      );
-    }
+      ),
+      appBar: AppBar(
+        title: Text(widget.title),
+        actions: <Widget>[],
+      ),
+    );
   }
 }

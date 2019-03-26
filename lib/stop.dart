@@ -10,9 +10,11 @@ import 'favorites.dart';
 import 'dart:io';
 import 'package:flutter/cupertino.dart';
 import 'package:liquid_pull_to_refresh/liquid_pull_to_refresh.dart';
+import 'package:flutter_datetime_picker/flutter_datetime_picker.dart';
 
 class StopPage extends StatefulWidget {
-  StopPage({Key key, this.title, this.station, this.dateFilter}) : super(key: key);
+  StopPage({Key key, this.title, this.station, this.dateFilter})
+      : super(key: key);
 
   final String title;
   final HafasStation station;
@@ -243,8 +245,9 @@ class _StopPageState extends State<StopPage>
             line.getStopByStation(this.widget.station) ?? line.stops.first;
         var minutesTDep = stop.depatureLive.difference(now);
         var depString = '';
-        var diffInMinutes = stop.depature == null ? 0 :
-            stop.depatureLive.difference(stop.depature).inMinutes;
+        var diffInMinutes = stop.depature == null
+            ? 0
+            : stop.depatureLive.difference(stop.depature).inMinutes;
         if (minutesTDep.inMinutes > 60) {
           depString = minutesTDep.toString().substring(0, 4);
         } else {
@@ -310,21 +313,34 @@ class _StopPageState extends State<StopPage>
       );
     } else {
       return Scaffold(
+        floatingActionButton: FloatingActionButton(
+          child: const Icon(Icons.timer),
+          tooltip: dateFilter.toString(),
+          onPressed: () {
+            DatePicker.showDateTimePicker(context, showTitleActions: true,
+                onChanged: (date) {
+              /*this.dateFilter = date;
+                      this.updateData();*/
+            }, onConfirm: (date) {
+              this.dateFilter = date;
+              this.updateData();
+            },
+                currentTime: dateFilter != null ? dateFilter : DateTime.now(),
+                theme: DatePickerTheme(
+                  backgroundColor: Theme.of(context).primaryColor,
+                  itemStyle: TextStyle(color: Colors.white),
+                  doneStyle: TextStyle(color: Colors.white),
+                  cancelStyle: TextStyle(color: Colors.black38),
+                ),
+                locale: LocaleType.en);
+          },
+        ),
         appBar: AppBar(
           // Here we take the value from the StopPage object that was created by
           // the App.build method, and use it to set our appbar title.
           title: Text(widget.title),
-          actions: <Widget>[
-            new IconButton(
-              tooltip: 'Favoriten',
-              icon: fav
-                  ? const Icon(Icons.favorite)
-                  : const Icon(Icons.favorite_border),
-              onPressed: () {
-                FavManager.current.add(widget.station);
-              },
-            ),
-          ],
+
+          actions: <Widget>[],
           bottom: TabBar(
             controller: tabController,
             tabs: [

@@ -27,6 +27,7 @@ dependencies:
   flutter_spinkit: "^3.1.0"
   datetime_picker_formfield: ^0.1.7
   dio: any
+  flutter_datetime_picker: any
   xml2json: ^3.0.3
   crypto: ^2.0.6
   flutter_map: ^0.1.4
