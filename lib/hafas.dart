@@ -7,10 +7,116 @@ import 'package:intl/intl.dart';
 import 'dart:math';
 import 'package:dio/dio.dart';
 
-class HafasProduct {}
+class HafasProduct {
+  static HafasProduct ICE = new HafasProduct(
+    id: "nationalExpress",
+    mode: "train",
+    bitmasks: 1,
+    name: "InterCityExpress",
+    short: "ICE",
+  );
+  static HafasProduct IC = new HafasProduct(
+    id: "national",
+    mode: "train",
+    bitmasks: 2,
+    name: "InterCity & EuroCity",
+    short: "IC/EC",
+  );
+  static HafasProduct RE = new HafasProduct(
+    id: "regionalExp",
+    mode: "train",
+    bitmasks: 4,
+    name: "RegionalExpress & InterRegio",
+    short: "RE/IR",
+  );
+  static HafasProduct RB = new HafasProduct(
+    id: "regional",
+    mode: "train",
+    bitmasks: 8,
+    name: "Regio",
+    short: "RB",
+  );
+  static HafasProduct S_BAHN = new HafasProduct(
+    id: "suburban",
+    mode: "train",
+    bitmasks: 16,
+    name: "S-Bahn",
+    short: "S",
+  );
+  static HafasProduct BUS = new HafasProduct(
+    id: "bus",
+    mode: "bus",
+    bitmasks: 32,
+    name: "Bus",
+    short: "B",
+  );
+  static HafasProduct FERRY = new HafasProduct(
+    id: "ferry",
+    mode: "watercraft",
+    bitmasks: 64,
+    name: "Fähre",
+    short: "F",
+  );
+  static HafasProduct U_BAHN = new HafasProduct(
+    id: "subway",
+    mode: "train",
+    bitmasks: 128,
+    name: "U-Bahn",
+    short: "U",
+  );
+  static HafasProduct TRAM = new HafasProduct(
+    id: "tram",
+    mode: "train",
+    bitmasks: 256,
+    name: "Tram",
+    short: "T",
+  );
+  static HafasProduct TAXI = new HafasProduct(
+    id: "taxi",
+    mode: "taxi",
+    bitmasks: 512,
+    name: "Taxi",
+    short: "Taxi",
+  );
+
+  static var PRODUCTS = [
+    HafasProduct.IC,
+    HafasProduct.ICE,
+    HafasProduct.RB,
+    HafasProduct.RE,
+    HafasProduct.S_BAHN,
+    HafasProduct.TRAM,
+    HafasProduct.U_BAHN,
+    HafasProduct.BUS,
+    HafasProduct.TAXI,
+    HafasProduct.FERRY,
+  ];
+
+  static HafasProduct getProduct(int id) {
+    return HafasProduct.PRODUCTS.firstWhere((e) => e.bitmasks == id);
+  }
+
+  String id;
+  String mode;
+  String name;
+  String short;
+  int bitmasks;
+  bool defaultProduct = true;
+  HafasProduct({
+    this.id,
+    this.bitmasks,
+    this.defaultProduct,
+    this.mode,
+    this.name,
+    this.short,
+  });
+}
 
 class HafasLocation {
-  HafasLocation({this.lat, this.lon});
+  HafasLocation({
+    this.lat,
+    this.lon,
+  });
   double lat;
   double lon;
 
@@ -41,6 +147,7 @@ class HafasStation {
   String lid;
   int dist = 0;
   HafasLocation location;
+  List<HafasLineInfo> lineInfo = [];
 
   Future<List<HafasLine>> getDepArr({
     DateTime date,
@@ -54,14 +161,27 @@ class HafasStation {
       'type': 'DEP',
       'time': new DateFormat("HHmmss").format(date),
       'date': new DateFormat("yyyyMMdd").format(date),
-      'stbLoc': {'lid': Uri.encodeFull('A=1@L=' + id.toString() + '@')},
+      'stbLoc': {
+        'lid': Uri.encodeFull('A=1@L=' + id.toString() + '@'),
+      },
+      // 'rtMode': 'OFF',
+      'getPasslist': true,
+      'stbFltrEquiv': true,
+      // 'showPassingPoints': true,
+      // 'getConGroups': false,
+      // 'getPolyline': false,
+      //'stbFltrEquiv': false,
+      // jnyFltrL: [products],
       'dur': duration != null ? duration.inMinutes : 60 * 12
     };
     try {
-      var res = await instance._request({
-        'meth': 'StationBoard',
-        'req': req,
-      }, {});
+      var res = await instance._request(
+        {
+          'meth': 'StationBoard',
+          'req': req,
+        },
+        {},
+      );
       var prodL = res['common']['prodL'];
       var locL = res['common']['locL'];
 
@@ -69,6 +189,9 @@ class HafasStation {
       res['jnyL'].forEach((dynamic item) {
         var stops = new List<HafasStop>();
         var prod = prodL[item['prodX']];
+        var product =
+            HafasProduct.PRODUCTS.firstWhere((e) => e.bitmasks == prod['cls']);
+
         item['stopL'].forEach((stop) {
           var stopInfo = locL[stop['locX']];
           var dtime =
@@ -81,18 +204,20 @@ class HafasStation {
               Hafas.parseDate(item['date'], stop['aTimeR'] ?? stop['aTimeS']);
 
           if (liveDtime != null &&
-              liveDtime.difference(DateTime.now()).isNegative) {
+              liveDtime.difference(DateTime.now()).inMinutes < -60) {
             liveDtime = liveDtime.add(const Duration(days: 1));
           }
 
-          if (dtime != null && dtime.difference(DateTime.now()).isNegative) {
+          if (dtime != null &&
+              dtime.difference(DateTime.now()).inMinutes < -60) {
             dtime = dtime.add(const Duration(days: 1));
           }
-          if (atime != null && atime.difference(DateTime.now()).isNegative) {
+          if (atime != null &&
+              atime.difference(DateTime.now()).inMinutes < -60) {
             atime = atime.add(const Duration(days: 1));
           }
           if (liveAtime != null &&
-              liveAtime.difference(DateTime.now()).isNegative) {
+              liveAtime.difference(DateTime.now()).inMinutes < -60) {
             liveAtime = liveAtime.add(const Duration(days: 1));
           }
           stops.add(new HafasStop(
@@ -115,11 +240,15 @@ class HafasStation {
         });
         items.add(new HafasLine(
           name: prod['name'],
+          product: product,
           info: item['dirTxt'],
           type: int.parse(prod['prodCtx']['catCode']) == 5 ? 'BUS' : 'TRAIN',
           stops: stops,
         ));
       });
+
+
+
       return items;
     } catch (e) {
       print(e);
@@ -131,11 +260,22 @@ class HafasStation {
     DateTime date,
     Duration duration,
   }) async {
-    return this.getDepArr(type: 'DEP', date: date, duration: duration);
+    return this.getDepArr(
+      type: 'DEP',
+      date: date,
+      duration: duration,
+    );
   }
 
-  Future<List<HafasLine>> arivals({DateTime date, Duration duration}) async {
-    return this.getDepArr(type: 'ARR', date: date, duration: duration);
+  Future<List<HafasLine>> arivals({
+    DateTime date,
+    Duration duration,
+  }) async {
+    return this.getDepArr(
+      type: 'ARR',
+      date: date,
+      duration: duration,
+    );
   }
 }
 
@@ -154,12 +294,19 @@ class HafasStop {
   DateTime arivalLive;
 }
 
+class HafasLineInfo {
+  HafasLineInfo({this.id, this.name});
+  String name;
+  String id;
+}
+
 class HafasLine {
   HafasLine({
     this.name,
     this.info,
     this.type,
     this.stops,
+    this.product,
   });
   HafasProduct product;
   String name;
@@ -241,9 +388,12 @@ class HafasConfig {
       'type': 'IPH',
       'name': 'DB Navigator'
     };
-    body['ext'] = 'DB.R15.12.a';
+    body['ext'] = 'DB.R18.06.a';
     body['ver'] = '1.16';
-    body['auth'] = {'type': 'AID', 'aid': 'n91dB8Z77MLdoR0K'};
+    body['auth'] = {
+      'type': 'AID',
+      'aid': 'n91dB8Z77MLdoR0K',
+    };
   }
 
   void transformReq(
@@ -276,8 +426,8 @@ abstract class ArrivalOptions {
 }
 
 class Hafas {
-  HafasConfig config = null;
-  Dio _dio = null;
+  HafasConfig config;
+  Dio _dio;
   Hafas({
     this.config,
   }) {
@@ -336,13 +486,14 @@ class Hafas {
     };
     config.transformReqBody(body);
     var bodyString = jsonEncode(body);
-
     var mopts = new RequestOptions(
       data: bodyString,
       baseUrl: config.endpoint,
       connectTimeout: 5000,
       receiveTimeout: 10000,
-      headers: {"user-agent": config.userAgent},
+      headers: {
+        "user-agent": config.userAgent,
+      },
       responseType: ResponseType.json,
       contentType: ContentType.json,
       method: 'POST',
@@ -406,15 +557,19 @@ class Hafas {
   }
 
   Future<List<HafasStation>> findStationsByQuery(
-      String query, HafasLocation location) async {
+    String query,
+    HafasLocation location,
+  ) async {
     var res = await _request({
-      'cfg': {'polyEnc': 'GPA'},
+      'cfg': {
+        'polyEnc': 'GPA',
+      },
       'meth': 'LocMatch',
       'req': {
         'input': {
           'loc': {
             // 'type': ,
-            'name': query + '?'
+            'name': query + '?',
           },
           'maxLoc': 25,
           'field': 'S'
@@ -428,7 +583,7 @@ class Hafas {
       );
       return new HafasStation(
         title: value['name'],
-        id: int.parse(value['extId'] ?? 0),
+        id: int.parse(value['extId'] ?? '0'),
         dist: location != null ? loc.getDistance(location).toInt() : 0,
         lid: value['lid'],
         location: loc,
@@ -446,9 +601,10 @@ class Hafas {
 
 /*main(List<String> args) async {
   var bahn = new Hafas(config: new HafasConfig());
-  List<HafasStation> res = await bahn.findStationsByQuery(' wiesb', null);
-  print(res.first.title);
-  print('-------------');
+  List<HafasStation> res =
+      await bahn.findStationsByQuery('gneisenaustraße wiesbaden', null);
+  //print(res.first.title);
+  //print('-------------');
   var deps = await res.first.depatures();
   deps.forEach((line) {
     print(line.name + ' - ' + line.info);
@@ -461,6 +617,6 @@ class Hafas {
           stop.depature.toString() +
           '');
     });
+    exit(0);
   });
-}
-*/
+}*/

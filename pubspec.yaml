@@ -28,12 +28,14 @@ dependencies:
   datetime_picker_formfield: ^0.1.7
   dio: any
   flutter_datetime_picker: any
+  card_settings: any
   xml2json: ^3.0.3
   crypto: ^2.0.6
   flutter_map: ^0.1.4
   intro_views_flutter: '^2.4.0'
   liquid_pull_to_refresh: ^1.0.2
   google_maps_flutter: ^0.4.0
+  flutter_picker: any
 
 dev_dependencies:
   flutter_test:

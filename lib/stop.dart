@@ -11,6 +11,44 @@ import 'dart:io';
 import 'package:flutter/cupertino.dart';
 import 'package:liquid_pull_to_refresh/liquid_pull_to_refresh.dart';
 import 'package:flutter_datetime_picker/flutter_datetime_picker.dart';
+import 'package:card_settings/card_settings.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'type_select.dart';
+
+class Sky extends CustomPainter {
+  HafasStop stop;
+  Sky(HafasStop _stop) {
+    this.stop = _stop;
+  }
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    if ((this.stop.depatureLive != null &&
+            this.stop.depatureLive.isAfter(DateTime.now())) ||
+        this.stop.depature.isAfter(DateTime.now())) {
+      canvas.drawRect(new Rect.fromLTWH(size.width / 2 - 2, 0, 4, size.height),
+          Paint()..color = Colors.black26);
+    } else {
+      canvas.drawRect(new Rect.fromLTWH(size.width / 2 - 2, 0, 4, size.height),
+          Paint()..color = Colors.red);
+    }
+
+    Offset of = new Offset(size.width / 2, size.height / 2);
+    canvas.drawCircle(of, 15, Paint()..color = const Color(0xFF2296F3));
+  }
+
+  @override
+  SemanticsBuilderCallback get semanticsBuilder {
+    return (Size size) {
+      return [];
+    };
+  }
+
+  @override
+  bool shouldRepaint(Sky oldDelegate) => false;
+  @override
+  bool shouldRebuildSemantics(Sky oldDelegate) => false;
+}
 
 class StopPage extends StatefulWidget {
   StopPage({Key key, this.title, this.station, this.dateFilter})
@@ -31,6 +69,7 @@ class _StopPageState extends State<StopPage>
   Future<dynamic> loading;
   bool loaded = false;
   bool fav = false;
+  List<HafasProduct> products = [];
   Timer updateTimer;
   DateTime dateFilter;
   DateFormat timeFormat = new DateFormat('HH:mm');
@@ -42,7 +81,7 @@ class _StopPageState extends State<StopPage>
     }
     tabController = new TabController(vsync: this, length: 2);
     this.updateData();
-    updateTimer = new Timer.periodic(const Duration(seconds: 20), (timer) {
+    updateTimer = new Timer.periodic(const Duration(seconds: 30), (timer) {
       updateData();
     });
   }
@@ -58,6 +97,17 @@ class _StopPageState extends State<StopPage>
   Future<void> updateData() async {
     var ldn = this.widget.station.depatures(date: dateFilter);
     var _fav = false;
+
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+
+    try {
+      var tprefs = prefs.getStringList(this.widget.station.lid + '_types');
+      this.products = tprefs
+          .map((e) => HafasProduct.PRODUCTS.firstWhere((p) => p.id == e))
+          .toList();
+    } catch (e) {
+      this.products = [];
+    }
 
     if (!loaded && mounted) {
       setState(() {
@@ -90,6 +140,42 @@ class _StopPageState extends State<StopPage>
     );
   }
 
+  IconData getProductIcon(HafasProduct product) {
+    if (product == HafasProduct.BUS) {
+      return Icons.directions_bus;
+    } else if (product == HafasProduct.U_BAHN) {
+      return Icons.directions_subway;
+    } else if (product == HafasProduct.TRAM) {
+      return Icons.directions_transit;
+    } else if (product == HafasProduct.FERRY) {
+      return Icons.directions_boat;
+    } else {
+      return Icons.directions_railway;
+    }
+  }
+
+  Future<void> showTypeSelect(BuildContext context) async {
+    showBottomSheet(
+      builder: (BuildContext context) {
+        return new ProductSelect(
+            products: this.products,
+            title: this.widget.station.title,
+            dateFilter: this.dateFilter,
+            lines: [],
+            change: (p, d) async {
+              this.dateFilter = d;
+              SharedPreferences prefs = await SharedPreferences.getInstance();
+              var prds = this.products.map((pr) {
+                return pr.id;
+              }).toList();
+              prefs.setStringList(this.widget.station.lid + '_types', prds);
+              this.updateData();
+            });
+      },
+      context: context,
+    );
+  }
+
   Future<void> showMetaInfo(HafasLine line, BuildContext context) async {
     showBottomSheet(
       builder: (BuildContext context) {
@@ -116,10 +202,11 @@ class _StopPageState extends State<StopPage>
             ));
           }
           return new ListTile(
-              leading: new ConstrainedBox(
-                constraints: BoxConstraints.tightFor(width: 10),
-                child: Container(
-                  color: Colors.red,
+              leading: CustomPaint(
+                painter: Sky(item),
+                size: new Size(
+                  70,
+                  72,
                 ),
               ),
               title: new Text(item.station.title),
@@ -143,17 +230,11 @@ class _StopPageState extends State<StopPage>
                     child: new Row(
                       children: <Widget>[
                         new Container(
-                          child: line.type == 'BUS'
-                              ? new Icon(
-                                  Icons.directions_bus,
-                                  size: 32,
-                                  color: Colors.white,
-                                )
-                              : new Icon(
-                                  Icons.directions_railway,
-                                  size: 32,
-                                  color: Colors.white,
-                                ),
+                          child: new Icon(
+                            getProductIcon(line.product),
+                            size: 32,
+                            color: Colors.white,
+                          ),
                           margin: const EdgeInsets.only(right: 15),
                         ),
                         new Expanded(
@@ -297,15 +378,44 @@ class _StopPageState extends State<StopPage>
     );
   }
 
+  buildSettingsTab() {
+    return new Container(
+      child: CardSettings(
+        children: <Widget>[
+          CardSettingsHeader(label: 'Favorite Book'),
+          CardSettingsMultiselect(
+            label: 'Linien',
+            initialValues: ["Wiesbaden"],
+            options: ["Wiesbaden", "Berlin"],
+          ),
+          CardSettingsMultiselect(
+            label: 'Typen',
+            initialValues: this.products.map((p) => p.name).toList(),
+            onChanged: (pr) async {
+              var prdcs = pr
+                  .map((e) =>
+                      HafasProduct.PRODUCTS.firstWhere((p) => p.name == e))
+                  .toList();
+              setState(() {
+                this.products = prdcs;
+              });
+              SharedPreferences prefs = await SharedPreferences.getInstance();
+              prefs.setStringList(this.widget.station.lid + '_types', pr);
+            },
+            options: HafasProduct.PRODUCTS.map((p) => p.name).toList(),
+          ),
+          CardSettingsButton(
+            backgroundColor: Colors.red,
+            label: "Zurücksetzen",
+            onPressed: () {},
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    // This method is rerun every time setState is called, for instance as done
-    // by the _incrementCounter method above.
-    //
-    // The Flutter framework has been optimized to make rerunning build methods
-    // fast, so that you can just rebuild anything that needs updating rather
-    // than having to individually change instances of widgets.
-
     if (AbfahrtStyle.forceIosStyle) {
       return CupertinoPageScaffold(
         navigationBar: new CupertinoNavigationBar(
@@ -316,34 +426,19 @@ class _StopPageState extends State<StopPage>
         child: new Text('dfdf'),
       );
     } else {
-      return Scaffold(
-        floatingActionButton: FloatingActionButton(
-          child: const Icon(Icons.timer),
-          tooltip: dateFilter.toString(),
-          onPressed: () {
-            DatePicker.showDateTimePicker(context, showTitleActions: true,
-                onChanged: (date) {
-              /*this.dateFilter = date;
-                      this.updateData();*/
-            }, onConfirm: (date) {
-              this.dateFilter = date;
-              this.updateData();
-            },
-                currentTime: dateFilter != null ? dateFilter : DateTime.now(),
-                theme: DatePickerTheme(
-                  backgroundColor: Theme.of(context).primaryColor,
-                  itemStyle: TextStyle(color: Colors.white),
-                  doneStyle: TextStyle(color: Colors.white),
-                  cancelStyle: TextStyle(color: Colors.black38),
-                ),
-                locale: LocaleType.en);
+      var scf = Scaffold(
+        floatingActionButton: new Builder(
+          builder: (context) {
+            return FloatingActionButton(
+              child: const Icon(Icons.filter),
+              onPressed: () {
+                this.showTypeSelect(context);
+              },
+            );
           },
         ),
         appBar: AppBar(
-          // Here we take the value from the StopPage object that was created by
-          // the App.build method, and use it to set our appbar title.
           title: Text(widget.title),
-
           actions: <Widget>[],
           bottom: TabBar(
             controller: tabController,
@@ -376,6 +471,7 @@ class _StopPageState extends State<StopPage>
           ],
         ),
       );
+      return scf;
     }
   }
 }
