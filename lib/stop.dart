@@ -95,11 +95,9 @@ class _StopPageState extends State<StopPage>
   }
 
   Future<void> updateData() async {
-    var ldn = this.widget.station.depatures(date: dateFilter);
+    var ldn = this.widget.station.depatures(date: dateFilter, duration: const Duration(hours: 6));
     var _fav = false;
-
     SharedPreferences prefs = await SharedPreferences.getInstance();
-
     try {
       var tprefs = prefs.getStringList(this.widget.station.lid + '_types');
       this.products = tprefs
@@ -430,7 +428,7 @@ class _StopPageState extends State<StopPage>
         floatingActionButton: new Builder(
           builder: (context) {
             return FloatingActionButton(
-              child: const Icon(Icons.filter),
+              child: const Icon(Icons.filter_list),
               onPressed: () {
                 this.showTypeSelect(context);
               },

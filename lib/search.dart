@@ -34,6 +34,7 @@ class _SearchPageState extends State<SearchPage> {
   TextEditingController searchInputController;
 
   double bottomSheetSize = 0;
+  String locationName = "";
   Position position;
 
   @override
@@ -82,7 +83,8 @@ class _SearchPageState extends State<SearchPage> {
     );
     if (mounted) {
       setState(() {
-        this.searchInputController.text = places.first.name;
+        this.searchInputController.text = '';
+        this.locationName = places.first.name;
         this.serachResults = res;
       });
     }
@@ -191,7 +193,7 @@ class _SearchPageState extends State<SearchPage> {
 
     return new Scaffold(
       body: body,
-      bottomNavigationBar: GestureDetector(
+      bottomSheet: GestureDetector(
         onVerticalDragUpdate: (dragDetails) {
          
         },
@@ -206,7 +208,6 @@ class _SearchPageState extends State<SearchPage> {
               child: new Column(
                 children: <Widget>[
                   new Container(
-                    child: new SafeArea(
                       child: new TextField(
                         style: const TextStyle(
                           color: Colors.white,
@@ -217,6 +218,8 @@ class _SearchPageState extends State<SearchPage> {
                         },
                         decoration: new InputDecoration(
                           labelText: 'Suche',
+                          hintText: 'Suche nach deiner Haltestelle',
+                          alignLabelWithHint: true,
                           labelStyle: TextStyle(
                             color: Colors.white,
                           ),
@@ -242,8 +245,7 @@ class _SearchPageState extends State<SearchPage> {
                           ),
                         ),
                       ),
-                    ),
-                    padding: new EdgeInsets.fromLTRB(15, 15, 15, 0),
+                    padding: new EdgeInsets.fromLTRB(15, 15, 15, 15),
                     color: Theme.of(context).primaryColor,
                   ),
                   buildMap(),
