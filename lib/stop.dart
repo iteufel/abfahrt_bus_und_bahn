@@ -6,11 +6,8 @@ import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong/latlong.dart';
 import 'hafas.dart';
 import 'package:intl/intl.dart';
-import 'favorites.dart';
-import 'dart:io';
 import 'package:flutter/cupertino.dart';
 import 'package:liquid_pull_to_refresh/liquid_pull_to_refresh.dart';
-import 'package:flutter_datetime_picker/flutter_datetime_picker.dart';
 import 'package:card_settings/card_settings.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'type_select.dart';
@@ -95,7 +92,10 @@ class _StopPageState extends State<StopPage>
   }
 
   Future<void> updateData() async {
-    var ldn = this.widget.station.depatures(date: dateFilter, duration: const Duration(hours: 6));
+    var ldn = this.widget.station.depatures(
+          date: dateFilter,
+          duration: const Duration(hours: 6),
+        );
     var _fav = false;
     SharedPreferences prefs = await SharedPreferences.getInstance();
     try {
@@ -144,11 +144,13 @@ class _StopPageState extends State<StopPage>
     } else if (product == HafasProduct.U_BAHN) {
       return Icons.directions_subway;
     } else if (product == HafasProduct.TRAM) {
-      return Icons.directions_transit;
+      return Icons.tram;
     } else if (product == HafasProduct.FERRY) {
       return Icons.directions_boat;
+    } else if (product == HafasProduct.TAXI) {
+      return Icons.local_taxi;
     } else {
-      return Icons.directions_railway;
+      return Icons.train;
     }
   }
 
@@ -178,8 +180,7 @@ class _StopPageState extends State<StopPage>
     showBottomSheet(
       builder: (BuildContext context) {
         List<Widget> stops = line.stops.map((item) {
-          // var diff = item.arivalLive.difference(item.arival);
-          var diffMin = 0; //diff.inMinutes;
+          var diffMin = 0;
           var row = new Row(
             children: <Widget>[
               new Text(timeFormat.format(item.arivalLive ??
@@ -233,7 +234,9 @@ class _StopPageState extends State<StopPage>
                             size: 32,
                             color: Colors.white,
                           ),
-                          margin: const EdgeInsets.only(right: 15),
+                          margin: const EdgeInsets.only(
+                            right: 15,
+                          ),
                         ),
                         new Expanded(
                           child: new Text(
@@ -331,25 +334,22 @@ class _StopPageState extends State<StopPage>
         var diffInMinutes = stop.depature == null
             ? 0
             : stop.depatureLive.difference(stop.depature).inMinutes;
-        if (minutesTDep.inMinutes > 120) {
-          depString = minutesTDep.toString().substring(0, 4) + ' Std.';
+        if (minutesTDep.inMinutes > 240) {
+          depString = minutesTDep.toString().substring(0, 1) + ' Std.';
         } else {
           depString = (minutesTDep.inMinutes + 1).toString() + ' Min.';
         }
         return new ListTile(
             title: new Text(line.info),
             // key: Key(line),
-            leading: line.type == 'BUS'
-                ? new Icon(Icons.directions_bus)
-                : new Icon(Icons.directions_railway),
+            leading: new Icon(getProductIcon(line.product)),
             onTap: () {
               showMetaInfo(line, context);
             },
             trailing: new Text(
               depString,
-              style: new TextStyle(
-                color: minutesTDep.inMinutes < 0 ? Colors.red : Colors.green,
-              ),
+              style: Theme.of(context).textTheme.subhead.copyWith(
+                  color: minutesTDep.inMinutes < 0 ? Colors.red : Colors.green),
             ),
             // isThreeLine: true,
             subtitle: new Row(
@@ -425,10 +425,11 @@ class _StopPageState extends State<StopPage>
       );
     } else {
       var scf = Scaffold(
+        floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
         floatingActionButton: new Builder(
           builder: (context) {
             return FloatingActionButton(
-              child: const Icon(Icons.filter_list),
+              child: const Icon(Icons.edit),
               onPressed: () {
                 this.showTypeSelect(context);
               },
@@ -441,7 +442,7 @@ class _StopPageState extends State<StopPage>
           bottom: TabBar(
             controller: tabController,
             tabs: [
-              Tab(icon: Icon(Icons.directions_transit)),
+              Tab(icon: Icon(Icons.departure_board)),
               Tab(icon: Icon(Icons.map)),
             ],
           ),
@@ -452,13 +453,7 @@ class _StopPageState extends State<StopPage>
             new FutureBuilder(
               builder: (constext, snapshot) {
                 if (snapshot.connectionState == ConnectionState.waiting) {
-                  return new Center(
-                    child: new Container(
-                      child: new CircularProgressIndicator(),
-                      height: 48,
-                      width: 48,
-                    ),
-                  );
+                  return new Center(child: new CircularProgressIndicator());
                 } else {
                   return buildTimeTableTab();
                 }

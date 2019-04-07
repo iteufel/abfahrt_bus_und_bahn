@@ -12,21 +12,21 @@ class HafasProduct {
     id: "nationalExpress",
     mode: "train",
     bitmasks: 1,
-    name: "InterCityExpress",
+    name: "ICE",
     short: "ICE",
   );
   static HafasProduct IC = new HafasProduct(
     id: "national",
     mode: "train",
     bitmasks: 2,
-    name: "InterCity & EuroCity",
+    name: "IC/EC",
     short: "IC/EC",
   );
   static HafasProduct RE = new HafasProduct(
     id: "regionalExp",
     mode: "train",
     bitmasks: 4,
-    name: "RegionalExpress & InterRegio",
+    name: "RE/IR",
     short: "RE/IR",
   );
   static HafasProduct RB = new HafasProduct(
@@ -246,12 +246,8 @@ class HafasStation {
           stops: stops,
         ));
       });
-
-
-
       return items;
     } catch (e) {
-      print(e);
       return [];
     }
   }

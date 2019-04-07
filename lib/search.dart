@@ -1,31 +1,16 @@
 import 'dart:async';
 import 'dart:io';
-import 'package:abfahrt_gui/style.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
-import 'package:flutter_map/flutter_map.dart';
-
 import 'dart:ui';
 import 'package:geolocator/geolocator.dart';
-import 'package:latlong/latlong.dart';
 import 'stop.dart';
 import 'hafas.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class SearchPage extends StatefulWidget {
   SearchPage({Key key, this.title}) : super(key: key);
-
-  // This widget is the home page of your application. It is stateful, meaning
-  // that it has a State object (defined below) that contains fields that affect
-  // how it looks.
-
-  // This class is the configuration for the state. It holds the values (in this
-  // case the title) provided by the parent (in this case the App widget) and
-  // used by the build method of the State. Fields in a Widget subclass are
-  // always marked "final".
-
   final String title;
-
   @override
   _SearchPageState createState() => _SearchPageState();
 }
@@ -74,7 +59,7 @@ class _SearchPageState extends State<SearchPage> {
       position.longitude,
     );
     var rmv = new Hafas(config: new HafasConfig());
-    var res = await rmv.findStationsByCoordinates(
+    var res = rmv.findStationsByCoordinates(
       new HafasLocation(
         lat: position.latitude,
         lon: position.longitude,
@@ -95,7 +80,7 @@ class _SearchPageState extends State<SearchPage> {
     Position position = await Geolocator().getCurrentPosition(
       desiredAccuracy: LocationAccuracy.high,
     );
-    var res = await RMV.findStationsByQuery(
+    var res = RMV.findStationsByQuery(
       q.trim(),
       new HafasLocation(
         lat: position.latitude,
@@ -109,7 +94,7 @@ class _SearchPageState extends State<SearchPage> {
     }
   }
 
-  List<HafasStation> serachResults = [];
+  Future<List<HafasStation>> serachResults;
 
   Widget buildMap() {
     /*return new FlutterMap(
@@ -141,51 +126,69 @@ class _SearchPageState extends State<SearchPage> {
       mainAxisSize: MainAxisSize.min,
       children: <Widget>[
         new Expanded(
-          child: new ListView.builder(
-            itemBuilder: (context, index) {
-              if (Platform.isIOS) {
-                return new Container(
-                  decoration: new BoxDecoration(
-                    border: new Border(
-                      bottom: new BorderSide(
-                        color: Colors.black12,
-                        width: 1,
-                      ),
-                    ),
-                  ),
-                  child: new GestureDetector(
-                    child: new Row(
-                      children: <Widget>[
-                        new Expanded(
-                          child: new Text(serachResults[index].title),
-                        ),
-                        new Text(
-                          (serachResults[index].dist / 1000)
-                                  .toStringAsFixed(2) +
-                              ' Km',
-                        )
-                      ],
-                    ),
-                    onTap: () {
-                      showLocation(serachResults[index]);
-                    },
-                  ),
-                  padding: EdgeInsets.symmetric(
-                    vertical: 18,
-                    horizontal: 18,
-                  ),
-                );
-              } else {
-                return new ListTile(
-                  title: new Text(serachResults[index].title),
-                  trailing: new Text(
-                      (serachResults[index].dist / 1000).toStringAsFixed(2) +
-                          ' Km'),
-                  onTap: () => showLocation(serachResults[index]),
+          child: FutureBuilder(
+            builder: (context, state) {
+              if (state.connectionState == ConnectionState.waiting) {
+                return new Center(
+                  child: new CircularProgressIndicator(),
                 );
               }
+              var results = state.data as List<HafasStation>;
+              if (results.length == 0) {
+                return new Center(
+                  child: new Text(
+                    "Keine Haltestelle gefunden.",
+                    style: Theme.of(context).textTheme.subhead,
+                  ),
+                );
+              }
+              return new ListView.builder(
+                itemBuilder: (context, index) {
+                  if (Platform.isIOS) {
+                    return new Container(
+                      decoration: new BoxDecoration(
+                        border: new Border(
+                          bottom: new BorderSide(
+                            color: Colors.black12,
+                            width: 1,
+                          ),
+                        ),
+                      ),
+                      child: new GestureDetector(
+                        child: new Row(
+                          children: <Widget>[
+                            new Expanded(
+                              child: new Text(results[index].title),
+                            ),
+                            new Text(
+                              (results[index].dist / 1000).toStringAsFixed(2) +
+                                  ' Km',
+                            )
+                          ],
+                        ),
+                        onTap: () {
+                          showLocation(results[index]);
+                        },
+                      ),
+                      padding: EdgeInsets.symmetric(
+                        vertical: 18,
+                        horizontal: 18,
+                      ),
+                    );
+                  } else {
+                    return new ListTile(
+                      title: new Text(results[index].title),
+                      trailing: new Text(
+                          (results[index].dist / 1000).toStringAsFixed(2) +
+                              ' Km'),
+                      onTap: () => showLocation(results[index]),
+                    );
+                  }
+                },
+                itemCount: results.length,
+              );
             },
-            itemCount: serachResults.length,
+            future: serachResults,
           ),
         ),
       ],
@@ -194,9 +197,7 @@ class _SearchPageState extends State<SearchPage> {
     return new Scaffold(
       body: body,
       bottomSheet: GestureDetector(
-        onVerticalDragUpdate: (dragDetails) {
-         
-        },
+        onVerticalDragUpdate: (dragDetails) {},
         child: new Material(
           clipBehavior: Clip.antiAlias,
           borderRadius: BorderRadius.only(
@@ -208,43 +209,43 @@ class _SearchPageState extends State<SearchPage> {
               child: new Column(
                 children: <Widget>[
                   new Container(
-                      child: new TextField(
-                        style: const TextStyle(
+                    child: new TextField(
+                      style: const TextStyle(
+                        color: Colors.white,
+                      ),
+                      controller: this.searchInputController,
+                      onSubmitted: (String text) async {
+                        findByQuery(text);
+                      },
+                      decoration: new InputDecoration(
+                        labelText: 'Suche',
+                        hintText: 'Suche nach deiner Haltestelle',
+                        alignLabelWithHint: true,
+                        labelStyle: TextStyle(
                           color: Colors.white,
                         ),
-                        controller: this.searchInputController,
-                        onSubmitted: (String text) async {
-                          findByQuery(text);
-                        },
-                        decoration: new InputDecoration(
-                          labelText: 'Suche',
-                          hintText: 'Suche nach deiner Haltestelle',
-                          alignLabelWithHint: true,
-                          labelStyle: TextStyle(
+                        suffixIcon: new IconButton(
+                          icon: new Icon(Icons.location_searching,
+                              color: Colors.white),
+                          onPressed: findLoaction,
+                        ),
+                        enabledBorder: const OutlineInputBorder(
+                          borderSide: BorderSide(
                             color: Colors.white,
                           ),
-                          suffixIcon: new IconButton(
-                            icon: new Icon(Icons.location_searching,
-                                color: Colors.white),
-                            onPressed: findLoaction,
+                        ),
+                        border: const OutlineInputBorder(
+                          borderSide: const BorderSide(
+                            color: Colors.white,
                           ),
-                          enabledBorder: const OutlineInputBorder(
-                            borderSide: BorderSide(
-                              color: Colors.white,
-                            ),
-                          ),
-                          border: const OutlineInputBorder(
-                            borderSide: const BorderSide(
-                              color: Colors.white,
-                            ),
-                          ),
-                          focusedBorder: const OutlineInputBorder(
-                            borderSide: const BorderSide(
-                              color: Colors.white,
-                            ),
+                        ),
+                        focusedBorder: const OutlineInputBorder(
+                          borderSide: const BorderSide(
+                            color: Colors.white,
                           ),
                         ),
                       ),
+                    ),
                     padding: new EdgeInsets.fromLTRB(15, 15, 15, 15),
                     color: Theme.of(context).primaryColor,
                   ),

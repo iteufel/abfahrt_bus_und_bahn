@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'package:abfahrt_gui/style.dart';
 import 'package:flutter/material.dart';
 import 'dart:ui';
 import 'hafas.dart';
@@ -31,7 +30,7 @@ class ChipButtonState extends State<ChipButton> {
 
   @override
   Widget build(BuildContext context) {
-    TextStyle textStyle;
+    /*TextStyle textStyle;
     Color bgColor = Colors.transparent;
     if (this.enabled) {
       textStyle =
@@ -69,6 +68,21 @@ class ChipButtonState extends State<ChipButton> {
         padding: const EdgeInsets.fromLTRB(7, 9, 7, 9),
         margin: const EdgeInsets.all(7),
       ),
+    );*/
+    return new Padding(
+      child: new OutlineButton(
+        textColor: this.enabled ? Theme.of(context).accentColor : Colors.black,
+        child: new Text(this.widget.text),
+        onPressed: () {
+          this.setState(() {
+            this.enabled = !this.enabled;
+          });
+          if (this.widget.change != null) {
+            this.widget.change(this.enabled);
+          }
+        },
+      ),
+      padding: const EdgeInsets.all(4),
     );
   }
 }
@@ -199,7 +213,7 @@ class _ProductSelectState extends State<ProductSelect> {
           List value,
         ) {
           if (_debounce?.isActive ?? false) _debounce.cancel();
-          _debounce = Timer(const Duration(milliseconds: 1500), () {
+          _debounce = Timer(const Duration(milliseconds: 1000), () {
             this.dateFilter = (picker.adapter as DateTimePickerAdapter).value;
             this.widget.change(
                   this.widget.products,
@@ -220,145 +234,221 @@ class _ProductSelectState extends State<ProductSelect> {
         topRight: Radius.circular(25),
       ),
       child: new Container(
-        height: 575,
+        padding: EdgeInsets.only(bottom: 12),
         child: new SafeArea(
-          child: new SingleChildScrollView(
-            child: new Column(
-              children: <Widget>[
-                new Container(
-                  child: new Text(
-                    this.widget.title ?? 'Types',
-                    style: Theme.of(context).textTheme.title.copyWith(
-                          color: Colors.white,
-                        ),
+          child: new Column(
+            children: <Widget>[
+              new Container(
+                child: new Row(
+                  children: <Widget>[
+                    new Container(
+                      child: new Icon(
+                        Icons.place,
+                        size: 32,
+                        color: Colors.white,
+                      ),
+                      margin: const EdgeInsets.only(
+                        right: 15,
+                      ),
+                    ),
+                    new Expanded(
+                      child: new Text(
+                        this.widget.title,
+                        style: Theme.of(context).textTheme.title.copyWith(
+                              color: Colors.white,
+                            ),
+                        maxLines: 2,
+                      ),
+                    ),
+                    new IconButton(
+                      icon: const Icon(
+                        Icons.keyboard_arrow_down,
+                        color: Colors.white,
+                        size: 36,
+                      ),
+                      onPressed: () {
+                        Navigator.of(context).pop();
+                      },
+                    )
+                  ],
+                ),
+                padding: new EdgeInsets.all(15),
+                color: Theme.of(context).primaryColor,
+              ),
+              new Expanded(
+                child: new SingleChildScrollView(
+                  child: Column(
+                    children: <Widget>[
+                      new Row(
+                        children: <Widget>[
+                          new Expanded(
+                            child: new Container(
+                              margin: EdgeInsets.only(top: 1),
+                              // color: Theme.of(context).accentColor,
+                              child: new Text(
+                                "Abfahrtszeit",
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .body1
+                                    .copyWith(
+                                        color: Colors.black87,
+                                        fontWeight: FontWeight.w500,
+                                        fontSize: 29),
+                              ),
+                              padding: EdgeInsets.only(
+                                left: 15,
+                                top: 8,
+                                right: 15,
+                                // bottom: 0,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      new Row(
+                        children: <Widget>[
+                          new Expanded(
+                            child: pkw,
+                          ),
+                        ],
+                      ),
+                      new Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                        children: <Widget>[
+                          new OutlineButton(
+                            textTheme: ButtonTextTheme.normal,
+                            child: new Text("Jetzt"),
+                            onPressed: () {
+                              this.dateFilter = DateTime.now();
+                              (this.pk.adapter as DateTimePickerAdapter).value =
+                                  this.dateFilter;
+                              (this.pk.adapter as DateTimePickerAdapter)
+                                  .notifyDataChanged();
+                            },
+                          ),
+                          new OutlineButton(
+                            child: new Text("In 15 Min"),
+                            onPressed: () {
+                              this.dateFilter =
+                                  DateTime.now().add(new Duration(minutes: 15));
+                              (this.pk.adapter as DateTimePickerAdapter).value =
+                                  this.dateFilter;
+                              (this.pk.adapter as DateTimePickerAdapter)
+                                  .notifyDataChanged();
+                            },
+                          ),
+                          new OutlineButton(
+                            child: new Text("In 30 Min"),
+                            onPressed: () {
+                              this.dateFilter =
+                                  DateTime.now().add(new Duration(minutes: 30));
+                              (this.pk.adapter as DateTimePickerAdapter).value =
+                                  this.dateFilter;
+                              (this.pk.adapter as DateTimePickerAdapter)
+                                  .notifyDataChanged();
+                            },
+                          ),
+                          new OutlineButton(
+                            child: new Text("In 60 Min"),
+                            onPressed: () {
+                              this.dateFilter =
+                                  DateTime.now().add(new Duration(minutes: 60));
+                              (this.pk.adapter as DateTimePickerAdapter).value =
+                                  this.dateFilter;
+                              (this.pk.adapter as DateTimePickerAdapter)
+                                  .notifyDataChanged();
+                            },
+                          )
+                        ],
+                      ),
+                      new Row(
+                        children: <Widget>[
+                          new Expanded(
+                            child: new Container(
+                              // color: Theme.of(context).accentColor,
+                              child: new Text(
+                                "Produkte",
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .display1
+                                    .copyWith(
+                                        color: Colors.black87,
+                                        fontWeight: FontWeight.w500,
+                                        fontSize: 29),
+                              ),
+                              padding: EdgeInsets.only(
+                                left: 15,
+                                top: 8,
+                                right: 15,
+                                bottom: 0,
+                              ),
+                            ),
+                          )
+                        ],
+                      ),
+                      new Row(
+                        children: <Widget>[
+                          new ChipMultiSelect(
+                            items: HafasProduct.PRODUCTS,
+                            selected: this.widget.products,
+                            textExtractor: (item) {
+                              return item.name;
+                            },
+                            change: (items) {
+                              this.widget.change(items, this.dateFilter);
+                            },
+                          ),
+                        ],
+                      ),
+                      new Row(
+                        children: <Widget>[
+                          new Expanded(
+                            child: new Container(
+                              // color: Theme.of(context).accentColor,
+                              child: new Text(
+                                "Richtung",
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .display1
+                                    .copyWith(
+                                        color: Colors.black87,
+                                        fontWeight: FontWeight.w500,
+                                        fontSize: 29),
+                              ),
+                              padding: EdgeInsets.only(
+                                left: 15,
+                                top: 8,
+                                right: 15,
+                                bottom: 0,
+                              ),
+                            ),
+                          )
+                        ],
+                      ),
+                      new Row(
+                        children: <Widget>[
+                          new ChipMultiSelect(
+                            items: HafasProduct.PRODUCTS,
+                            selected: this.widget.lines,
+                            textExtractor: (item) {
+                              return (item as HafasLine).;
+                            },
+                            change: (items) {
+                              this.widget.change(items, this.dateFilter);
+                            },
+                          ),
+                        ],
+                      ),
+                    ],
                   ),
-                  padding: EdgeInsets.all(15),
-                  color: Theme.of(context).accentColor,
-                  width: double.infinity,
                 ),
-                new Row(
-                  children: <Widget>[
-                    new Expanded(
-                      child: new Container(
-                        margin: EdgeInsets.only(top: 1),
-                        color: Theme.of(context).accentColor,
-                        child: new Text(
-                          "Abfahrtszeit",
-                          style: Theme.of(context)
-                              .textTheme
-                              .title
-                              .copyWith(color: Colors.white),
-                        ),
-                        padding: EdgeInsets.only(
-                          left: 15,
-                          top: 8,
-                          right: 15,
-                          bottom: 8,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-                new Row(
-                  children: <Widget>[
-                    new Expanded(
-                      child: pkw,
-                    ),
-                  ],
-                ),
-                new Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                  children: <Widget>[
-                    new OutlineButton(
-                      child: new Text("Jetzt"),
-                      onPressed: () {
-                        this.dateFilter = DateTime.now();
-                        (this.pk.adapter as DateTimePickerAdapter).value =
-                            this.dateFilter;
-                        (this.pk.adapter as DateTimePickerAdapter)
-                            .notifyDataChanged();
-                      },
-                    ),
-                    new OutlineButton(
-                      child: new Text("In 15 Min"),
-                      onPressed: () {
-                        this.dateFilter =
-                            DateTime.now().add(new Duration(minutes: 15));
-                        (this.pk.adapter as DateTimePickerAdapter).value =
-                            this.dateFilter;
-                        (this.pk.adapter as DateTimePickerAdapter)
-                            .notifyDataChanged();
-                      },
-                    ),
-                    new OutlineButton(
-                      child: new Text("In 30 Min"),
-                      onPressed: () {
-                        this.dateFilter =
-                            DateTime.now().add(new Duration(minutes: 30));
-                        (this.pk.adapter as DateTimePickerAdapter).value =
-                            this.dateFilter;
-                        (this.pk.adapter as DateTimePickerAdapter)
-                            .notifyDataChanged();
-                      },
-                    ),
-                    new OutlineButton(
-                      child: new Text("In 60 Min"),
-                      onPressed: () {
-                        this.dateFilter =
-                            DateTime.now().add(new Duration(minutes: 60));
-                        (this.pk.adapter as DateTimePickerAdapter).value =
-                            this.dateFilter;
-                        (this.pk.adapter as DateTimePickerAdapter)
-                            .notifyDataChanged();
-                      },
-                    )
-                  ],
-                ),
-                new Row(
-                  children: <Widget>[
-                    new Expanded(
-                      child: new Container(
-                        color: Theme.of(context).accentColor,
-                        child: new Text(
-                          "Produkte",
-                          style: Theme.of(context)
-                              .textTheme
-                              .title
-                              .copyWith(color: Colors.white),
-                        ),
-                        padding: EdgeInsets.only(
-                          left: 15,
-                          top: 8,
-                          right: 15,
-                          bottom: 8,
-                        ),
-                      ),
-                    )
-                  ],
-                ),
-                new Row(
-                  children: <Widget>[
-                    new ChipMultiSelect(
-                      items: HafasProduct.PRODUCTS,
-                      selected: this.widget.products,
-                      textExtractor: (item) {
-                        return item.name;
-                      },
-                      change: (items) {
-                        this.widget.change(items, this.dateFilter);
-                      },
-                    ),
-                  ],
-                ),
-              ],
-              mainAxisSize: MainAxisSize.min,
-            ),
+              )
+            ],
+            mainAxisSize: MainAxisSize.min,
           ),
         ),
         constraints: const BoxConstraints(
-          minWidth: double.infinity,
-          minHeight: 425,
-        ),
+            minWidth: double.infinity, minHeight: 425, maxHeight: 600),
       ),
       color: Colors.white,
       elevation: 10,
