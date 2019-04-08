@@ -161,7 +161,7 @@ class ProductSelect extends StatefulWidget {
     this.lines,
   }) : super(key: key);
   final String title;
-  final List<HafasLine> lines;
+  final List<HafasItem> lines;
   final List<HafasProduct> products;
 
   final ProductSelectChange change;
@@ -367,7 +367,7 @@ class _ProductSelectState extends State<ProductSelect> {
                             child: new Container(
                               // color: Theme.of(context).accentColor,
                               child: new Text(
-                                "Produkte",
+                                "Verkehrsmittel",
                                 style: Theme.of(context)
                                     .textTheme
                                     .display1
@@ -400,45 +400,7 @@ class _ProductSelectState extends State<ProductSelect> {
                           ),
                         ],
                       ),
-                      new Row(
-                        children: <Widget>[
-                          new Expanded(
-                            child: new Container(
-                              // color: Theme.of(context).accentColor,
-                              child: new Text(
-                                "Richtung",
-                                style: Theme.of(context)
-                                    .textTheme
-                                    .display1
-                                    .copyWith(
-                                        color: Colors.black87,
-                                        fontWeight: FontWeight.w500,
-                                        fontSize: 29),
-                              ),
-                              padding: EdgeInsets.only(
-                                left: 15,
-                                top: 8,
-                                right: 15,
-                                bottom: 0,
-                              ),
-                            ),
-                          )
-                        ],
-                      ),
-                      new Row(
-                        children: <Widget>[
-                          new ChipMultiSelect(
-                            items: HafasProduct.PRODUCTS,
-                            selected: this.widget.lines,
-                            textExtractor: (item) {
-                              return (item as HafasLine).;
-                            },
-                            change: (items) {
-                              this.widget.change(items, this.dateFilter);
-                            },
-                          ),
-                        ],
-                      ),
+                
                     ],
                   ),
                 ),

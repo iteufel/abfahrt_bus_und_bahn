@@ -32,6 +32,14 @@ class Sky extends CustomPainter {
 
     Offset of = new Offset(size.width / 2, size.height / 2);
     canvas.drawCircle(of, 15, Paint()..color = const Color(0xFF2296F3));
+
+    final ParagraphBuilder paragraphBuilder =
+        ParagraphBuilder(ParagraphStyle(fontWeight: FontWeight.w600))
+          ..addText('H');
+    final Paragraph paragraph = paragraphBuilder.build()
+      ..layout(ParagraphConstraints(width: size.width / 2));
+
+    canvas.drawParagraph(paragraph, of.translate(-5, -8));
   }
 
   @override
@@ -62,7 +70,7 @@ class StopPage extends StatefulWidget {
 class _StopPageState extends State<StopPage>
     with SingleTickerProviderStateMixin {
   TabController tabController;
-  List<HafasLine> departures = [];
+  List<HafasItem> departures = [];
   Future<dynamic> loading;
   bool loaded = false;
   bool fav = false;
@@ -75,6 +83,8 @@ class _StopPageState extends State<StopPage>
     super.initState();
     if (this.widget.dateFilter != null) {
       this.dateFilter = this.widget.dateFilter;
+    } else {
+      // this.dateFilter = DateTime.now();
     }
     tabController = new TabController(vsync: this, length: 2);
     this.updateData();
@@ -93,7 +103,8 @@ class _StopPageState extends State<StopPage>
 
   Future<void> updateData() async {
     var ldn = this.widget.station.depatures(
-          date: dateFilter,
+          date: dateFilter ??
+              new DateTime.now().subtract(new Duration(minutes: 1)),
           duration: const Duration(hours: 6),
         );
     var _fav = false;
@@ -176,7 +187,7 @@ class _StopPageState extends State<StopPage>
     );
   }
 
-  Future<void> showMetaInfo(HafasLine line, BuildContext context) async {
+  Future<void> showMetaInfo(HafasItem line, BuildContext context) async {
     showBottomSheet(
       builder: (BuildContext context) {
         List<Widget> stops = line.stops.map((item) {
@@ -184,14 +195,14 @@ class _StopPageState extends State<StopPage>
           var row = new Row(
             children: <Widget>[
               new Text(timeFormat.format(item.arivalLive ??
+                  item.depatureLive ??
                   item.arival ??
-                  item.depature ??
-                  item.depatureLive)),
+                  item.depature)),
               new Text(' - '),
               new Text(timeFormat.format(item.depatureLive ??
-                  item.depature ??
                   item.arivalLive ??
-                  item.arival))
+                  item.arival ??
+                  item.depature))
             ],
           );
           if (diffMin > 0) {
@@ -200,19 +211,33 @@ class _StopPageState extends State<StopPage>
               style: new TextStyle(color: Colors.red),
             ));
           }
-          return new ListTile(
-              leading: CustomPaint(
-                painter: Sky(item),
-                size: new Size(
-                  70,
-                  72,
+          return new InkWell(
+            onTap: () {
+              showLocation(item.station, item.arivalLive);
+            },
+            child: new Flex(
+              children: <Widget>[
+                new Container(
+                  child: CustomPaint(
+                    painter: Sky(item),
+                    size: new Size(
+                      70,
+                      72,
+                    ),
+                  ),
                 ),
-              ),
-              title: new Text(item.station.title),
-              onTap: () {
-                showLocation(item.station, item.arivalLive);
-              },
-              subtitle: row);
+                new Expanded(
+                  child: new ListTile(
+                    selected: item.station.id == this.widget.station.id,
+                    contentPadding: EdgeInsets.all(0),
+                    title: new Text(item.station.title),
+                    subtitle: row,
+                  ),
+                )
+              ],
+              direction: Axis.horizontal,
+            ),
+          );
         }).toList();
         return new Material(
           clipBehavior: Clip.antiAlias,
@@ -240,7 +265,7 @@ class _StopPageState extends State<StopPage>
                         ),
                         new Expanded(
                           child: new Text(
-                            line.name + ' - ' + line.info,
+                            line.name + ' - ' + line.info + (line.stops.first.platform == null ? '' : line.stops.first.platform),
                             style: Theme.of(context).textTheme.title.copyWith(
                                   color: Colors.white,
                                 ),
@@ -340,20 +365,33 @@ class _StopPageState extends State<StopPage>
           depString = (minutesTDep.inMinutes + 1).toString() + ' Min.';
         }
         return new ListTile(
+            contentPadding: EdgeInsets.all(0),
             title: new Text(line.info),
             // key: Key(line),
-            leading: new Icon(getProductIcon(line.product)),
+            leading: new Container(
+              child: new Icon(getProductIcon(line.product)),
+              height: double.infinity,
+              padding: EdgeInsets.only(left: 15),
+            ),
             onTap: () {
               showMetaInfo(line, context);
             },
-            trailing: new Text(
-              depString,
-              style: Theme.of(context).textTheme.subhead.copyWith(
-                  color: minutesTDep.inMinutes < 0 ? Colors.red : Colors.green),
+            trailing: new Padding(
+              child: new Text(
+                depString,
+                style: Theme.of(context).textTheme.subhead.copyWith(
+                    color:
+                        minutesTDep.inMinutes < 0 ? Colors.red : Colors.green),
+              ),
+              padding: new EdgeInsets.only(right: 15),
             ),
             // isThreeLine: true,
             subtitle: new Row(
               children: <Widget>[
+                new Text(
+                  stop.platform != null ? 'Gleis ' + stop.platform + ' - ' : '',
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
                 new Text(line.name + ' - ' + timeFormat.format(stop.depature)),
                 new Text(
                   diffInMinutes > 0 ? ' +' + diffInMinutes.toString() : '',
@@ -414,22 +452,12 @@ class _StopPageState extends State<StopPage>
 
   @override
   Widget build(BuildContext context) {
-    if (AbfahrtStyle.forceIosStyle) {
-      return CupertinoPageScaffold(
-        navigationBar: new CupertinoNavigationBar(
-          middle: new Text(widget.title),
-          backgroundColor: Colors.transparent,
-          border: null,
-        ),
-        child: new Text('dfdf'),
-      );
-    } else {
-      var scf = Scaffold(
-        floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
+    return Scaffold(
+        floatingActionButtonLocation: FloatingActionButtonLocation.endDocked,
         floatingActionButton: new Builder(
           builder: (context) {
             return FloatingActionButton(
-              child: const Icon(Icons.edit),
+              child: const Icon(Icons.filter_list),
               onPressed: () {
                 this.showTypeSelect(context);
               },
@@ -454,6 +482,8 @@ class _StopPageState extends State<StopPage>
               builder: (constext, snapshot) {
                 if (snapshot.connectionState == ConnectionState.waiting) {
                   return new Center(child: new CircularProgressIndicator());
+                } else if (snapshot.error != null) {
+                  return new Center(child: new Text("ERROR"));
                 } else {
                   return buildTimeTableTab();
                 }
@@ -462,9 +492,6 @@ class _StopPageState extends State<StopPage>
             ),
             buildMapTab(),
           ],
-        ),
-      );
-      return scf;
-    }
+        ));
   }
 }

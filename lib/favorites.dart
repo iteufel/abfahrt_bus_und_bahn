@@ -1,16 +1,8 @@
 import 'dart:async';
 import 'package:abfahrt_gui/stop.dart';
 import 'package:flutter/material.dart';
-import 'dart:ui';
-import 'package:dio/dio.dart';
-import 'package:geolocator/geolocator.dart';
-import 'dart:math';
-import 'package:flutter_map/flutter_map.dart';
-import 'package:latlong/latlong.dart';
 import 'package:path/path.dart';
 import 'hafas.dart';
-import 'package:intl/intl.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sqflite/sqflite.dart';
 
 class FavManager {
@@ -76,16 +68,6 @@ class FavManager {
 
 class FavoritesPage extends StatefulWidget {
   FavoritesPage({Key key, this.title, this.station}) : super(key: key);
-
-  // This widget is the home page of your application. It is stateful, meaning
-  // that it has a State object (defined below) that contains fields that affect
-  // how it looks.
-
-  // This class is the configuration for the state. It holds the values (in this
-  // case the title) provided by the parent (in this case the App widget) and
-  // used by the build method of the State. Fields in a Widget subclass are
-  // always marked "final".
-
   final String title;
   final HafasStation station;
 
@@ -103,7 +85,6 @@ class _FavoritesPageState extends State<FavoritesPage> {
   }
 
   Future<void> load() async {
-    //var prefs = await SharedPreferences.getInstance();
     var res = await FavManager.current.get();
     setState(() {
       this.favs = res;
@@ -112,17 +93,8 @@ class _FavoritesPageState extends State<FavoritesPage> {
 
   @override
   Widget build(BuildContext context) {
-    // This method is rerun every time setState is called, for instance as done
-    // by the _incrementCounter method above.
-    //
-    // The Flutter framework has been optimized to make rerunning build methods
-    // fast, so that you can just rebuild anything that needs updating rather
-    // than having to individually change instances of widgets.
-
     return Scaffold(
       appBar: AppBar(
-        // Here we take the value from the FavoritesPage object that was created by
-        // the App.build method, and use it to set our appbar title.
         title: Text('Favoriten'),
         actions: <Widget>[],
       ),

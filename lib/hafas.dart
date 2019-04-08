@@ -1,5 +1,6 @@
 // import 'package:dio/dio.dart';
 import 'dart:async';
+import 'dart:developer';
 import 'dart:io';
 import 'dart:convert';
 import 'package:crypto/crypto.dart' as crypto;
@@ -149,7 +150,7 @@ class HafasStation {
   HafasLocation location;
   List<HafasLineInfo> lineInfo = [];
 
-  Future<List<HafasLine>> getDepArr({
+  Future<List<HafasItem>> getDepArr({
     DateTime date,
     Duration duration,
     String type,
@@ -185,15 +186,19 @@ class HafasStation {
       var prodL = res['common']['prodL'];
       var locL = res['common']['locL'];
 
-      var items = new List<HafasLine>();
+      var items = new List<HafasItem>();
       res['jnyL'].forEach((dynamic item) {
         var stops = new List<HafasStop>();
         var prod = prodL[item['prodX']];
         var product =
             HafasProduct.PRODUCTS.firstWhere((e) => e.bitmasks == prod['cls']);
-
+        String platform;
+        if (item['stopL'].length > 0) {
+          platform = item['stopL'][0]["dPlatfS"];
+        }
         item['stopL'].forEach((stop) {
           var stopInfo = locL[stop['locX']];
+          var stopPlatform = stop["dPlatfS"];
           var dtime =
               Hafas.parseDate(item['date'], stop['dTimeS'] ?? stop['dTimeR']);
           var liveDtime =
@@ -220,11 +225,17 @@ class HafasStation {
               liveAtime.difference(DateTime.now()).inMinutes < -60) {
             liveAtime = liveAtime.add(const Duration(days: 1));
           }
+
+          if (product != HafasProduct.BUS) {
+           // debugger();
+          }
+
           stops.add(new HafasStop(
             arival: atime ?? dtime,
             depature: dtime ?? atime,
             depatureLive: liveDtime ?? dtime,
             arivalLive: liveAtime ?? atime,
+            platform: stopPlatform,
             station: new HafasStation(
               title: stopInfo['name'],
               id: int.parse(stopInfo['extId']),
@@ -238,13 +249,12 @@ class HafasStation {
             ),
           ));
         });
-        items.add(new HafasLine(
-          name: prod['name'],
-          product: product,
-          info: item['dirTxt'],
-          type: int.parse(prod['prodCtx']['catCode']) == 5 ? 'BUS' : 'TRAIN',
-          stops: stops,
-        ));
+        items.add(new HafasItem(
+            name: prod['name'],
+            product: product,
+            info: item['dirTxt'],
+            type: int.parse(prod['prodCtx']['catCode']) == 5 ? 'BUS' : 'TRAIN',
+            stops: stops));
       });
       return items;
     } catch (e) {
@@ -252,7 +262,7 @@ class HafasStation {
     }
   }
 
-  Future<List<HafasLine>> depatures({
+  Future<List<HafasItem>> depatures({
     DateTime date,
     Duration duration,
   }) async {
@@ -263,7 +273,7 @@ class HafasStation {
     );
   }
 
-  Future<List<HafasLine>> arivals({
+  Future<List<HafasItem>> arivals({
     DateTime date,
     Duration duration,
   }) async {
@@ -276,18 +286,21 @@ class HafasStation {
 }
 
 class HafasStop {
-  HafasStop({
-    this.station,
-    this.depature,
-    this.arival,
-    this.arivalLive,
-    this.depatureLive,
-  });
+  HafasStop(
+      {this.station,
+      this.depature,
+      this.arival,
+      this.arivalLive,
+      this.depatureLive,
+      this.platform,
+      this.info});
   HafasStation station;
   DateTime depature;
   DateTime arival;
   DateTime depatureLive;
   DateTime arivalLive;
+  String platform;
+  String info;
 }
 
 class HafasLineInfo {
@@ -296,14 +309,8 @@ class HafasLineInfo {
   String id;
 }
 
-class HafasLine {
-  HafasLine({
-    this.name,
-    this.info,
-    this.type,
-    this.stops,
-    this.product,
-  });
+class HafasItem {
+  HafasItem({this.name, this.info, this.type, this.stops, this.product});
   HafasProduct product;
   String name;
   String info;
@@ -537,6 +544,11 @@ class Hafas {
         'getStops': true
       }
     }, {});
+
+  if(res['locL'] == null) {
+    return [];
+  }
+
     return (res['locL'] as List).map((value) {
       return new HafasStation(
         title: value['name'],
